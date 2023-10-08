@@ -21,6 +21,7 @@ os.system(command)
 
 out_folder = args.indir.split("/")[-2] if args.indir.endswith("/") else args.indir.split("/")[-1]
 
+
 # run Deep3DFaceRecon
 os.chdir('Deep3DFaceRecon_pytorch')
 command = "python test.py --img_folder=" + args.indir + " --gpu_ids=0 --name=pretrained --epoch=20"

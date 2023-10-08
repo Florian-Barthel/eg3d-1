@@ -8,7 +8,7 @@
 # without an express license agreement from NVIDIA CORPORATION or
 # its affiliates is strictly prohibited.
 
-name: eg3d
+name: eg3d_3
 channels:
   - pytorch
   - nvidia
@@ -20,7 +20,7 @@ dependencies:
   - pillow=8.3.1
   - scipy=1.7.1
   - pytorch=1.11.0
-  - cudatoolkit=11.1
+  - cudatoolkit
   - requests=2.26.0
   - tqdm=4.62.2
   - ninja=1.10.2
