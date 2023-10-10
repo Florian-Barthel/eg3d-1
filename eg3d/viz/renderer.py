@@ -347,7 +347,7 @@ class Renderer:
             synthesis_kwargs.use_cached_backbone = False
         self._last_model_input = w
         # custom w
-        w = torch.tensor(np.load('out/projected_w.npz')[("w")]).to("cuda")
+        w = torch.tensor(np.load('out/20231009-1729/230_projected_w.npz')[("w")]).to("cuda")
         out, layers = self.run_synthesis_net(G, w, c, capture_layer=layer_name, **synthesis_kwargs)
 
         # Update layer list.
