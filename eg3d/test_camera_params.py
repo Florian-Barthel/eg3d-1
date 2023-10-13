@@ -3,21 +3,16 @@
 import os
 import re
 import time
-from time import perf_counter
 import click
-import imageio
 import numpy as np
 import PIL.Image
 import torch
-import pickle
 from tqdm import tqdm
 import fnmatch
 
 import dnnlib
 import legacy
 from camera_utils import LookAtPoseSampler
-from inversion.w_inversion import project
-from inversion.pti_inversion import project_pti
 
 
 @click.command()
