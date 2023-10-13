@@ -5,11 +5,11 @@ import torch
 from typing import List
 
 from inversion.load_data import load
-from load_data import ImageItem
+from inversion.load_data import ImageItem
 
 
 def select_evenly(images: List[ImageItem], num_targets: int):
-    all_angles = torch.tensor([item.xz_angle for item in images])
+    all_angles = torch.tensor([item.xz_angle() for item in images])
     min_angle = torch.min(all_angles)
     max_angle = torch.max(all_angles)
     target_angles = torch.linspace(start=min_angle, end=max_angle, steps=num_targets)

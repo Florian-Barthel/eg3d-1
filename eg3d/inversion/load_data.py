@@ -1,5 +1,8 @@
+import copy
 import fnmatch
 import re
+from typing import Tuple, List
+
 from tqdm import tqdm
 import torch
 import PIL
@@ -12,23 +15,8 @@ class ImageItem:
     def __init__(self, file_name: str, c: torch.tensor, device, img_resolution=512):
         self.file_name = file_name
         self.c = c
+        self.original_c = copy.deepcopy(c)
         self.device = device
-
-        # extrinsic parameters
-        self.extrinsic = c[0, :16].reshape(4, 4)
-        self.rotation = self.extrinsic[:-1, :-1]
-        self.x = self.extrinsic[0, -1]
-        self.y = self.extrinsic[1, -1]
-        self.z = self.extrinsic[2, -1]
-        self.xz_angle = torch.arctan2(self.z, self.x)
-        self.direction = torch.matmul(self.rotation.to("cpu"), torch.tensor([[0.0], [0.0], [-1.0]]).to("cpu"))
-        mag = torch.sqrt(self.direction[0, 0]**2 + self.direction[1, 0]**2 + self.direction[2, 0]**2)
-        self.direction /= mag
-
-        # intrinsic parameters
-        self.intrinsic = c[0, 16:].reshape(3, 3)
-        self.focal_x = self.intrinsic[0, 0]
-        self.focal_y = self.intrinsic[1, 1]
 
         # load image.
         self.target_pil = PIL.Image.open(file_name).convert('RGB')
@@ -38,7 +26,38 @@ class ImageItem:
         self.target_pil = self.target_pil.resize((img_resolution, img_resolution), PIL.Image.LANCZOS)
         self.w, self.h = self.target_pil.size
         self.t_uint8 = np.array(self.target_pil, dtype=np.uint8)
-        self.target_tensor = torch.tensor(self.t_uint8.transpose([2, 0, 1]), device=device)
+
+        target_tensor = torch.tensor(self.t_uint8.transpose([2, 0, 1]), device=device)
+        self.target_tensor = target_tensor.unsqueeze(0).to(torch.float32) / 255.0 * 2 - 1
+        self.feature = None
+
+    def extrinsic(self, original=False):
+        if original:
+            return self.original_c[0, :16].reshape(4, 4)
+        return self.c[0, :16].reshape(4, 4)
+
+    def intrinsic(self, original=False):
+        if original:
+            return self.original_c[0, 16:].reshape(3, 3)
+        return self.c[0, 16:].reshape(3, 3)
+
+    def rotation(self, original=False):
+        return self.extrinsic(original)[:-1, :-1]
+
+    def xyz(self, original=False) -> List[np.ndarray]:
+        x = self.extrinsic(original)[0, -1].to("cpu").detach().numpy()
+        y = self.extrinsic(original)[1, -1].to("cpu").detach().numpy()
+        z = self.extrinsic(original)[2, -1].to("cpu").detach().numpy()
+        return [x, y, z]
+
+    def xz_angle(self, original=False):
+        x, y, z = self.xyz(original)
+        return np.arctan2(z, x)
+
+    def direction(self, original=False):
+        direction = torch.matmul(self.rotation(original).to("cpu"), torch.tensor([[0.0], [0.0], [-1.0]]).to("cpu"))
+        mag = torch.sqrt(direction[0, 0]**2 + direction[1, 0]**2 + direction[2, 0]**2)
+        return direction / mag
 
 
 def load(folder: str, img_resolution: int, device="cpu"):
