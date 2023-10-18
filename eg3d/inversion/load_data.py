@@ -14,8 +14,8 @@ import dnnlib
 class ImageItem:
     def __init__(self, file_name: str, c: torch.tensor, device, img_resolution=512):
         self.file_name = file_name
-        self.c = c
-        self.original_c = copy.deepcopy(c)
+        self.c_item = CamItem(c)
+        self.original_c_item = CamItem(copy.deepcopy(c))
         self.device = device
 
         # load image.
@@ -31,36 +31,42 @@ class ImageItem:
         self.target_tensor = target_tensor.unsqueeze(0).to(torch.float32) / 255.0 * 2 - 1
         self.feature = None
 
-    def extrinsic(self, original=False):
-        if original:
-            return self.original_c[0, :16].reshape(4, 4)
+
+class CamItem:
+    def __init__(self, c: torch.tensor):
+        self.c = c
+
+    def extrinsic(self):
         return self.c[0, :16].reshape(4, 4)
 
-    def intrinsic(self, original=False):
-        if original:
-            return self.original_c[0, 16:].reshape(3, 3)
+    def intrinsic(self):
         return self.c[0, 16:].reshape(3, 3)
 
-    def rotation(self, original=False):
-        return self.extrinsic(original)[:-1, :-1]
+    def rotation(self):
+        return self.extrinsic()[:-1, :-1]
 
-    def xyz(self, original=False) -> List[np.ndarray]:
-        x = self.extrinsic(original)[0, -1].to("cpu").detach().numpy()
-        y = self.extrinsic(original)[1, -1].to("cpu").detach().numpy()
-        z = self.extrinsic(original)[2, -1].to("cpu").detach().numpy()
+    def xyz(self, as_numpy=False):
+        x = self.extrinsic()[0, -1]
+        y = self.extrinsic()[1, -1]
+        z = self.extrinsic()[2, -1]
+        if as_numpy:
+            x = x.cpu().detach().numpy()
+            y = y.cpu().detach().numpy()
+            z = z.cpu().detach().numpy()
         return [x, y, z]
 
-    def xz_angle(self, original=False):
-        x, y, z = self.xyz(original)
-        return np.arctan2(z, x)
+    def xz_angle(self):
+        x, y, z = self.xyz()
+        angle = torch.arctan2(z, x)
+        return angle
 
-    def direction(self, original=False):
-        direction = torch.matmul(self.rotation(original).to("cpu"), torch.tensor([[0.0], [0.0], [-1.0]]).to("cpu"))
+    def direction(self):
+        direction = torch.matmul(self.rotation().to("cpu"), torch.tensor([[0.0], [0.0], [-1.0]]).to("cpu"))
         mag = torch.sqrt(direction[0, 0]**2 + direction[1, 0]**2 + direction[2, 0]**2)
         return direction / mag
 
 
-def load(folder: str, img_resolution: int, device="cpu"):
+def load(folder: str, img_resolution: int, device="cpu") -> List[ImageItem]:
     dataset_kwargs = dnnlib.EasyDict(class_name='training.dataset.ImageFolderDataset', path=folder,
                                      use_labels=True, max_size=None, xflip=False)
     dataset = dnnlib.util.construct_class_by_name(**dataset_kwargs)
@@ -79,3 +85,9 @@ def load(folder: str, img_resolution: int, device="cpu"):
         images.append(ImageItem(target_fname, c, device, img_resolution))
 
     return images
+
+
+if __name__ == "__main__":
+    images = load("../../dataset_preprocessing/ffhq/1", 512)
+    for img in images:
+        print(img.file_name, img.c_item.xz_angle() / torch.pi, *img.c_item.xyz())

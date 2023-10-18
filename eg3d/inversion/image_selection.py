@@ -6,13 +6,19 @@ from typing import List
 
 from inversion.load_data import load
 from inversion.load_data import ImageItem
+from inversion.plots import compare_cam_plot_interpolate
 
 
 def select_evenly(images: List[ImageItem], num_targets: int):
-    all_angles = torch.tensor([item.xz_angle() for item in images])
+    all_angles = torch.tensor([item.c_item.xz_angle() for item in images])
     min_angle = torch.min(all_angles)
     max_angle = torch.max(all_angles)
-    target_angles = torch.linspace(start=min_angle, end=max_angle, steps=num_targets)
+
+    if num_targets == 1:
+        # select the most centered view
+        target_angles = [torch.pi / 2]
+    else:
+        target_angles = torch.linspace(start=min_angle, end=max_angle, steps=num_targets)
 
     # find the closest match in list and return index
     target_indices = []
@@ -22,9 +28,23 @@ def select_evenly(images: List[ImageItem], num_targets: int):
     return target_indices
 
 
+def select_evenly_interpolate(images: List[ImageItem], num_targets: int):
+    num_total = num_targets + num_targets - 1
+    all_indices = select_evenly(images, num_total)
+    target_indices = []
+    interpolated_indices = []
+    for i in range(len(all_indices)):
+        if i % 2 == 0 or i == len(all_indices) - 1:
+            target_indices.append(all_indices[i])
+        else:
+            interpolated_indices.append(all_indices[i])
+    return target_indices, interpolated_indices
+
+
 if __name__ == "__main__":
-    images = load("../../dataset_preprocessing/ffhq/1", 512, device="mps")
-    indices = select_evenly(images, 5)
-    print(indices)
-    print(*[images[i].direction for i in indices])
+    images = load("../../dataset_preprocessing/ffhq/1", 512)
+    target_indices, interpolated_indices = select_evenly_interpolate(images, 10)
+    target_images = [images[i] for i in target_indices]
+    interpolated_images = [images[i] for i in interpolated_indices]
+    compare_cam_plot_interpolate(target_images, interpolated_images)
     print()

@@ -11,16 +11,20 @@
 import sys
 import copy
 import traceback
+from typing import List
+
 import numpy as np
 import torch
 import torch.fft
 import torch.nn
 import matplotlib.cm
 import dnnlib
+from inversion.utils import interpolate_w_by_cam
 from torch_utils.ops import upfirdn2d
 import legacy # pylint: disable=import-error
 
 from camera_utils import LookAtPoseSampler
+from inversion.load_data import CamItem
 
 
 
@@ -347,7 +351,16 @@ class Renderer:
             synthesis_kwargs.use_cached_backbone = False
         self._last_model_input = w
         # custom w TODO
-        w = torch.tensor(np.load('out/20231011-1119_num_targets_12_var3-128_opt_cam_001/projected_w.npz')[("w")]).to("cuda")
+        checkpoint = np.load('out/20231017-1338_num_targets_5_var3-128_multi_w_with_inter_fixed_5_depth_reg_pti_rand_depth_view/499_projected_w_mult.npz')
+
+        if "ws" in checkpoint.keys():
+            ws = [torch.tensor(w_).to("cuda") for w_ in checkpoint['ws']]
+            cs = [torch.tensor(c_).to("cuda") for c_ in checkpoint['cs']]
+            w = interpolate_w_by_cam(ws, cs, c, verbose=True).to("cuda")
+            # w = torch.tensor(self.interpolate_w_by_cam(ws, cs, c.detach().cpu().numpy())).to("cuda")
+        else:
+            w = torch.tensor(checkpoint["w"]).to("cuda")
+
         out, layers = self.run_synthesis_net(G, w, c, capture_layer=layer_name, **synthesis_kwargs)
 
         # Update layer list.
@@ -408,6 +421,24 @@ class Renderer:
             fft = (fft / fft.mean()).log10() * 10 # dB
             fft = self._apply_cmap((fft / fft_range_db + 1) / 2)
             res.image = torch.cat([img.expand_as(fft), fft], dim=1)
+
+    @staticmethod
+    def interpolate_w_by_cam(ws: List[np.ndarray], cs: List[np.ndarray], c: np.ndarray):
+        angle = np.array([CamItem(c).xz_angle()])
+        cs = np.array([CamItem(cs[i]).xz_angle() for i in range(len(cs))])
+
+        cs_diff = np.abs(cs - angle)
+        closest_index, second_closest_index = np.argpartition(cs_diff, 2)[:2]
+        index_left = np.minimum(closest_index, second_closest_index)
+        index_right = np.maximum(closest_index, second_closest_index)
+
+        total_dist = np.abs(cs[index_left] - cs[index_right])
+        dist_1 = np.abs(cs[index_left] - angle)
+        mag = dist_1 / total_dist
+        w_int = ws[index_left] * (1 - mag) + ws[index_right] * mag
+        print(f"w{index_left} * {(1 - mag)} + w{index_right} * {mag}")
+        return w_int
+
 
     @staticmethod
     def run_synthesis_net(net, *args, capture_layer=None, **kwargs): # => out, layers
