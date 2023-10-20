@@ -98,11 +98,13 @@ def run(
         np.savez(f"{rundir}/angles.npz", values=angles)
 
         print(rundir)
-        print(f"{desc}_ms_ssim", np.mean(ms_ssim))
         print(f"{desc}_mse", np.mean(mse))
         print(f"{desc}_lpips", np.mean(lpips))
+        print(f"{desc}_ms_ssim", np.mean(ms_ssim))
         print(f"{desc}_id_sim", np.mean(id_sim))
-        print("-------")
+        print(f"{desc}-------")
+        print(f"{np.mean(mse)}\t{np.mean(lpips)}\t{np.mean(ms_ssim)}\t{np.mean(id_sim)}")
+        print(f"{desc}-------")
 
 
 if __name__ == "__main__":

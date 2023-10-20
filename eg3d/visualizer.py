@@ -33,6 +33,7 @@ from viz import zoom_widget
 from viz import conditioning_pose_widget
 from viz import render_type_widget
 from viz import render_depth_sample_widget
+from viz import pca_widget
 
 #----------------------------------------------------------------------------
 
@@ -50,6 +51,7 @@ class Visualizer(imgui_window.ImguiWindow):
         # Widget interface.
         self.args               = dnnlib.EasyDict()
         self.result             = dnnlib.EasyDict()
+        self.w_offset           = None
         self.pane_w             = 0
         self.label_w            = 0
         self.button_w           = 0
@@ -68,6 +70,8 @@ class Visualizer(imgui_window.ImguiWindow):
         self.conditioning_pose_widget        = conditioning_pose_widget.ConditioningPoseWidget(self)
         self.render_type_widget = render_type_widget.RenderTypeWidget(self)
         self.render_depth_sample_widget = render_depth_sample_widget.RenderDepthSampleWidget(self)
+        self.pca_widget = pca_widget.PCAWidget(self)
+
 
         if capture_dir is not None:
             self.capture_widget.path = capture_dir
@@ -149,6 +153,9 @@ class Visualizer(imgui_window.ImguiWindow):
         expanded, _visible = imgui_utils.collapsing_header('Layers & channels', default=True)
         self.backbone_cache_widget(expanded)
         self.layer_widget(expanded)
+        expanded, _visible = imgui_utils.collapsing_header('PCA', default=True)
+        self.pca_widget(expanded)
+
 
         # Render.
         if self.is_skipping_frames():
@@ -156,7 +163,7 @@ class Visualizer(imgui_window.ImguiWindow):
         elif self._defer_rendering > 0:
             self._defer_rendering -= 1
         elif self.args.pkl is not None:
-            self._async_renderer.set_args(**self.args)
+            self._async_renderer.set_args(**self.args, w_offset=self.w_offset)
             result = self._async_renderer.get_result()
             if result is not None:
                 self.result = result
@@ -197,6 +204,7 @@ class AsyncRenderer:
         self._closed        = False
         self._is_async      = False
         self._cur_args      = None
+        self._cur_w_offset  = None
         self._cur_result    = None
         self._cur_stamp     = 0
         self._renderer_obj  = None
@@ -220,14 +228,15 @@ class AsyncRenderer:
     def set_async(self, is_async):
         self._is_async = is_async
 
-    def set_args(self, **args):
+    def set_args(self, w_offset, **args):
         assert not self._closed
-        if args != self._cur_args:
+        if not np.array_equal(w_offset, self._cur_w_offset) or args != self._cur_args:
             if self._is_async:
-                self._set_args_async(**args)
+                self._set_args_async(**args, w_offset=w_offset)
             else:
-                self._set_args_sync(**args)
+                self._set_args_sync(**args, w_offset=w_offset)
             self._cur_args = args
+            self._cur_w_offset = w_offset
 
     def _set_args_async(self, **args):
         if self._process is None:
@@ -305,6 +314,9 @@ def main(
         'https://api.ngc.nvidia.com/v2/models/nvidia/research/eg3d/versions/1/files/ffhqrebalanced512-64.pkl',
         'https://api.ngc.nvidia.com/v2/models/nvidia/research/eg3d/versions/1/files/ffhqrebalanced512-128.pkl',
         'https://api.ngc.nvidia.com/v2/models/nvidia/research/eg3d/versions/1/files/shapenetcars128-64.pkl',
+        "/home/barthel/Documents/eg3d-1/eg3d/out/20231018-1921_multi_w_targets_5_inter_depth_reg/fintuned_generator.pkl",
+        "/home/barthel/Documents/eg3d-1/eg3d/networks/var3-128.pkl",
+        "/home/barthel/Documents/eg3d-1/eg3d/out/20231020-1827_multi_w_targets_5_iter_500_500_inter_depth_reg_depth_loss_x2/fintuned_generator.pkl"
     ]
 
     # Populate recent pickles list with pretrained model URLs.

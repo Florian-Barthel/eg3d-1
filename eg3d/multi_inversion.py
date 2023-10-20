@@ -1,19 +1,15 @@
 """ Projecting input images into latent spaces. """
 import json
 import os
-import re
 import time
 from time import perf_counter
 from typing import List
-
 import click
 import imageio
 import numpy as np
 import PIL.Image
 import torch
 import pickle
-from tqdm import tqdm
-import fnmatch
 from torch.utils.tensorboard import SummaryWriter
 
 import dnnlib
@@ -22,6 +18,8 @@ from inversion.w_inversion import project
 from inversion.pti_inversion import project_pti
 from inversion.load_data import ImageItem, load
 from inversion.image_selection import select_evenly
+from run_metrics import run as run_all_metrics
+
 
 
 @click.command()
@@ -31,7 +29,7 @@ from inversion.image_selection import select_evenly
 @click.option('--num-steps-pti', help='Number of optimization steps for pivot tuning', type=int, default=350,
               show_default=True)
 @click.option('--seed', help='Random seed', type=int, default=303, show_default=True)
-@click.option('--save-video', help='Save an mp4 video of optimization progress', type=bool, default=True,
+@click.option('--save-video', help='Save an mp4 video of optimization progress', type=bool, default=False,
               show_default=True)
 @click.option('--outdir', help='Where to save the output images', required=True, metavar='DIR')
 @click.option('--fps', help='Frames per second of final video', default=30, show_default=True)
@@ -53,6 +51,8 @@ def run_projection(
 ):
     cur_time = time.strftime("%Y%m%d-%H%M", time.localtime())
     desc = ("/" + cur_time)
+    desc += f"_multiview_{num_targets}"
+    desc += f"_iter_{num_steps}_{num_steps_pti}"
     os.makedirs(outdir, exist_ok=True)
     outdir += desc
     writer = SummaryWriter(outdir)
@@ -152,7 +152,7 @@ def run_projection(
             G_new.cpu()
         video.close()
 
-
+    run_all_metrics(target_fname, 200, outdir, network_pkl)
 # ----------------------------------------------------------------------------
 
 if __name__ == "__main__":

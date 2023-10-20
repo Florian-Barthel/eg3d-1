@@ -7,7 +7,7 @@ from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
 from inversion.utils import create_vgg_features, create_w_stats, interpolate_w_by_cam
-from inversion.loss import perc, mse
+from inversion.loss import perc, mse, IDLoss, DepthLoss
 from inversion.custom_vgg import CustomVGG, NvidiaVGG16
 from inversion.load_data import ImageItem
 
@@ -46,6 +46,8 @@ def project(
     vgg = NvidiaVGG16(device)
     # vgg = CustomVGG("vgg19").to(device)
     create_vgg_features(images, vgg, downsampling=downsampling)
+    id_loss_model = IDLoss()
+    depth_loss_model = DepthLoss(num_targets=len(target_indices))
 
     # create latent vectors w for each target image
     # w_avg = torch.tensor(w_avg, dtype=torch.float32, device=device).repeat(1, G.backbone.mapping.num_ws, 1)
@@ -77,9 +79,6 @@ def project(
             buf[:] = torch.randn_like(buf)
             buf.requires_grad = True
 
-    all_depth_imgs = torch.zeros(len(target_indices), len(target_indices), 128, 128).to(device)
-    depth_initialized = np.zeros(len(target_indices)).astype(bool)
-
     pbar = tqdm(range(num_steps))
     for step in pbar:
         # Learning rate schedule.
@@ -93,8 +92,7 @@ def project(
             param_group['lr'] = lr
 
         optimize_cam_step = step % 5 == 0 and step > 0 and optimize_cam
-        depth_step = step % 3 == 0 and not optimize_cam_step and use_depth_reg
-        depth_index = np.random.choice(len(target_indices))
+        depth_step = step % 5 == 0 and not optimize_cam_step and use_depth_reg
 
         agg_mse_loss = 0
         agg_perc_loss = 0
@@ -102,21 +100,34 @@ def project(
         agg_w_norm_loss = 0
         agg_loss = 0
         agg_cam_loss = 0
+        agg_id_loss = 0
 
         for count, pair in enumerate(zip(target_indices, w_opt_list)):
             i, w_opt = pair
 
             if depth_step:
-                image_depth = G.synthesis(w_opt, c=images[target_indices[depth_index]].c_item.c, noise_mode='const')['image_depth'][0]
-                depth_loss = 0
-                if depth_initialized[depth_index]:
-                    depth_loss = mse(image_depth, torch.mean(all_depth_imgs[depth_index], dim=0, keepdim=True))
-                    depth_loss.backward()
-                all_depth_imgs[depth_index][count] = image_depth.detach()
-                agg_depth_loss += depth_loss
+                if count > 0:
+                    cam = images[target_indices[count - 1]].c_item.c
+                    image_depth = G.synthesis(w_opt, c=cam, noise_mode='const')['image_depth'][0]
+                    depth_loss = depth_loss_model(count - 1, image_depth)
+                    if depth_loss > 0:
+                        depth_loss.backward()
+                    agg_depth_loss += depth_loss
+
+                if count < len(target_indices) - 2:
+                    cam = images[target_indices[count + 1]].c_item.c
+                    image_depth = G.synthesis(w_opt, c=cam, noise_mode='const')['image_depth'][0]
+                    depth_loss = depth_loss_model(count + 1, image_depth)
+                    if depth_loss > 0:
+                        depth_loss.backward()
+                    agg_depth_loss += depth_loss
 
             elif optimize_cam_step:
-                synth_image = G.synthesis(w_opt, c=images[i].c_item.c, noise_mode='const')['image']
+                synth = G.synthesis(w_opt, c=images[i].c_item.c, noise_mode='const')
+                synth_image = synth['image']
+                image_depth = synth['image_depth'][0]
+                depth_loss_model.update(count, image_depth)
+
                 mse_loss = mse(images[i].target_tensor, synth_image)
                 mse_loss.backward()
                 cam_optimizer.step()
@@ -124,24 +135,28 @@ def project(
                 agg_cam_loss += mse_loss
 
             else:
-                synth_image = G.synthesis(w_opt, c=images[i].c_item.c, noise_mode='const')['image']
+                synth = G.synthesis(w_opt, c=images[i].c_item.c, noise_mode='const')
+                synth_image = synth['image']
+                image_depth = synth['image_depth'][0]
+                depth_loss_model.update(count, image_depth)
                 perc_loss = perc(images[i].feature, synth_image, vgg=vgg, downsampling=downsampling)
                 mse_loss = mse(images[i].target_tensor, synth_image)
                 w_norm_loss = mse(w_opt, w_checkpoint)
+                id_loss = id_loss_model(synth_image=synth_image, target_image=images[i].target_tensor)
 
-                loss = 0.1 * mse_loss + perc_loss + 1.0 * w_norm_loss
+                loss = 0.1 * mse_loss + perc_loss + 1.0 * w_norm_loss + id_loss
                 loss.backward()
 
                 agg_mse_loss += mse_loss
                 agg_perc_loss += perc_loss
                 agg_w_norm_loss += w_norm_loss
+                agg_id_loss = id_loss
                 agg_loss += loss
 
         if depth_step:
             writer.add_scalar('W/Depth Loss', agg_depth_loss / len(target_indices), step)
             optimizer.step()
             optimizer.zero_grad(set_to_none=True)
-            depth_initialized[depth_index] = True
 
         elif optimize_cam_step:
             pbar.set_description(f'W Inversion Camera Optimisation: {step + 1:>4d}/{num_steps} mse: {agg_cam_loss / len(target_indices):<4.2f}')
@@ -158,6 +173,7 @@ def project(
             description += f" w_norm: {agg_w_norm_loss / len(target_indices):<4.2f}"
             pbar.set_description(description)
 
+            writer.add_scalar('W/ID Loss', agg_id_loss / len(target_indices), step)
             writer.add_scalar('W/MSE Loss', agg_mse_loss / len(target_indices), step)
             writer.add_scalar('W/Perceptual Loss', agg_perc_loss / len(target_indices), step)
             writer.add_scalar('W/Dist to Avg Loss', agg_w_norm_loss / len(target_indices), step)
@@ -177,7 +193,8 @@ def project(
                 synth_image = G.synthesis(w, c=target_cam, noise_mode='const')['image']
                 perc_loss = perc(target_img.feature, synth_image, vgg=vgg, downsampling=downsampling)
                 mse_loss = mse(target_img.target_tensor, synth_image)
-                loss = 0.1 * mse_loss + perc_loss
+                id_loss = id_loss_model(synth_image=synth_image, target_image=images[i].target_tensor)
+                loss = 0.1 * mse_loss + perc_loss + id_loss
                 loss.backward()
 
                 perc_loss_agg += perc_loss

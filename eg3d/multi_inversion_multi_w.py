@@ -19,6 +19,7 @@ from inversion.multi_w_inversion import project
 from inversion.multi_pti_inversion import project_pti
 from inversion.load_data import ImageItem, load
 from inversion.image_selection import select_evenly_interpolate
+from run_metrics import run as run_all_metrics
 
 
 @click.command()
@@ -28,7 +29,7 @@ from inversion.image_selection import select_evenly_interpolate
 @click.option('--num-steps-pti', help='Number of optimization steps for pivot tuning', type=int, default=350,
               show_default=True)
 @click.option('--seed', help='Random seed', type=int, default=303, show_default=True)
-@click.option('--save-video', help='Save an mp4 video of optimization progress', type=bool, default=True,
+@click.option('--save-video', help='Save an mp4 video of optimization progress', type=bool, default=False,
               show_default=True)
 @click.option('--outdir', help='Where to save the output images', required=True, metavar='DIR')
 @click.option('--fps', help='Frames per second of final video', default=30, show_default=True)
@@ -58,28 +59,15 @@ def run_projection(
     desc = ("/" + cur_time)
     desc += "_multi_w"
     desc += f"_targets_{num_targets}"
+    desc += f"_iter_{num_steps}_{num_steps_pti}"
     desc += "_inter" if use_interpolation else ""
     desc += "_depth_reg" if depth_reg else ""
+    desc += "_cam_opt" if optimize_cam else ""
+    desc += "_depth_loss_x2"
 
     os.makedirs(outdir, exist_ok=True)
     outdir += desc
     writer = SummaryWriter(outdir)
-
-    with open(outdir + "/config.json", "w") as file:
-        json.dump({
-            "net": network_pkl,
-            "target_fname": target_fname,
-            "seed": seed,
-            "num_steps": num_steps,
-            "num_steps_pti": num_steps_pti,
-            "num_targets": num_targets,
-            "downsampling": downsampling,
-            "optimize_cam": optimize_cam,
-            "time": cur_time,
-            "use_interpolation": use_interpolation,
-            "continue_w": continue_w,
-            "depth_reg": depth_reg
-        }, file)
 
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -113,7 +101,8 @@ def run_projection(
         optimize_cam=optimize_cam,
         use_depth_reg=depth_reg
     )
-    print(f'Elapsed: {(perf_counter() - start_time):.1f} s')
+    time_opt_w = (perf_counter() - start_time)
+    start_time = perf_counter()
 
     G_steps = project_pti(
         G,
@@ -129,7 +118,25 @@ def run_projection(
         use_interpolation=use_interpolation,
         use_depth_reg=depth_reg
     )
-    print(f'Elapsed: {(perf_counter() - start_time):.1f} s')
+    time_opt_pti = (perf_counter() - start_time)
+
+    with open(outdir + "/config.json", "w") as file:
+        json.dump({
+            "net": network_pkl,
+            "target_fname": target_fname,
+            "seed": seed,
+            "num_steps": num_steps,
+            "num_steps_pti": num_steps_pti,
+            "num_targets": num_targets,
+            "downsampling": downsampling,
+            "optimize_cam": optimize_cam,
+            "time": cur_time,
+            "time_w": time_opt_w,
+            "time_pti": time_opt_pti,
+            "use_interpolation": use_interpolation,
+            "continue_w": continue_w,
+            "depth_reg": depth_reg
+        }, file)
 
     # Save final projected frame and W vector.
     images[0].target_pil.save(f'{outdir}/target.png')
@@ -168,6 +175,8 @@ def run_projection(
             video.append_data(np.concatenate([images[0].t_uint8, synth_image], axis=1))
             G_new.cpu()
         video.close()
+
+    run_all_metrics(data_path=target_fname, num_samples=200, rundir=outdir, original_network=network_pkl)
 
 
 # ----------------------------------------------------------------------------

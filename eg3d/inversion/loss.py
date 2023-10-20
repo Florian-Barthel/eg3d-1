@@ -58,3 +58,23 @@ class IDLoss(torch.nn.Module):
         y_feats = self.extract_feats(target_image)
         y_feats = y_feats.detach()
         return 1 - y_feats.dot(x_feats)
+
+
+class DepthLoss:
+    def __init__(self, num_targets, depth_image_size=128, depth_multiplier=1.1):
+        self.depth_list = torch.zeros([num_targets, 1, depth_image_size, depth_image_size], dtype=torch.float32).to("cuda")
+        self.initialized_list = [False] * num_targets
+        self.num_targets = num_targets
+        self.depth_multiplier = depth_multiplier
+
+    def __call__(self, view_index, depth_image):
+        depth_image *= self.depth_multiplier
+        loss = 0
+        if self.initialized_list[view_index]:
+            loss += mse(depth_image, self.depth_list[view_index])
+        return loss * self.depth_multiplier
+
+    def update(self, view_index, depth_image):
+        self.depth_list[view_index] = depth_image.detach()
+        self.initialized_list[view_index] = True
+

@@ -261,6 +261,7 @@ class Renderer:
         fft_beta        = 8,
         input_transform = None,
         untransform     = False,
+        w_offset        = None,
 
         yaw             = 0,
         pitch           = 0,
@@ -351,7 +352,8 @@ class Renderer:
             synthesis_kwargs.use_cached_backbone = False
         self._last_model_input = w
         # custom w TODO
-        checkpoint = np.load('out/20231017-1338_num_targets_5_var3-128_multi_w_with_inter_fixed_5_depth_reg_pti_rand_depth_view/499_projected_w_mult.npz')
+        # checkpoint = np.load('out/20231018-1921_multi_w_targets_5_inter_depth_reg/499_projected_w_mult.npz')
+        checkpoint = np.load("out/20231020-1827_multi_w_targets_5_iter_500_500_inter_depth_reg_depth_loss_x2/499_projected_w_mult.npz")
 
         if "ws" in checkpoint.keys():
             ws = [torch.tensor(w_).to("cuda") for w_ in checkpoint['ws']]
@@ -361,6 +363,9 @@ class Renderer:
         else:
             w = torch.tensor(checkpoint["w"]).to("cuda")
 
+        if w_offset is not None:
+            w_offset = torch.tensor(w_offset).to("cuda")[None, None, :].repeat(w.shape[0], 1, 1)
+            w += w_offset
         out, layers = self.run_synthesis_net(G, w, c, capture_layer=layer_name, **synthesis_kwargs)
 
         # Update layer list.

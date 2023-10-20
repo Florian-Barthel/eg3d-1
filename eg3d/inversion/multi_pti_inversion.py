@@ -4,12 +4,11 @@ import PIL.Image
 import torch
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
-import numpy as np
 
 from inversion.load_data import ImageItem
 from inversion.utils import create_vgg_features, interpolate_w_by_cam
 from inversion.custom_vgg import CustomVGG, NvidiaVGG16
-from inversion.loss import mse, perc
+from inversion.loss import mse, perc, IDLoss, DepthLoss
 
 
 def project_pti(
@@ -36,54 +35,66 @@ def project_pti(
     # vgg = CustomVGG("vgg19").to(device)
     vgg = NvidiaVGG16(device=device)
     create_vgg_features(images, vgg, downsampling)
+    id_loss_model = IDLoss()
+    depth_loss_model = DepthLoss(num_targets=len(target_indices))
 
     w_pivots = [w_pivot.to(device).detach() for w_pivot in w_pivots]
     optimizer = torch.optim.Adam(G.parameters(), betas=(0.9, 0.999), lr=initial_learning_rate)
 
     out_params = []
-    all_depth_imgs = torch.zeros(len(target_indices), len(target_indices), 128, 128).to(device)
-    depth_initialized = np.zeros(len(target_indices)).astype(bool)
-
     pbar = tqdm(range(num_steps))
     for step in pbar:
         agg_mse_loss = 0
         agg_perc_loss = 0
         agg_loss = 0
         agg_depth_loss = 0
+        agg_id_loss = 0
 
-        depth_step = step % 3 == 0 and use_depth_reg
-        depth_index = np.random.choice(len(target_indices))
+        depth_step = step % 5 == 0 and use_depth_reg
 
         for count, pair in enumerate(zip(target_indices, w_pivots)):
             i, w_pivot = pair
 
             if depth_step:
-                image_depth = G.synthesis(w_pivot.unsqueeze(0), c=images[target_indices[depth_index]].c_item.c, noise_mode='const')['image_depth'][0]
-                depth_loss = 0
-                if depth_initialized[depth_index]:
-                    depth_loss = mse(image_depth, torch.mean(all_depth_imgs[depth_index], dim=0, keepdim=True))
-                    depth_loss.backward()
-                all_depth_imgs[depth_index][count] = image_depth.detach()
-                agg_depth_loss += depth_loss
+                if count > 0:
+                    cam = images[target_indices[count - 1]].c_item.c
+                    image_depth = G.synthesis(w_pivot.unsqueeze(0), c=cam, noise_mode='const')['image_depth'][0]
+                    depth_loss = depth_loss_model(count - 1, image_depth)
+                    if depth_loss > 0:
+                        depth_loss.backward()
+                    agg_depth_loss += depth_loss
+
+                if count < len(target_indices) - 2:
+                    cam = images[target_indices[count + 1]].c_item.c
+                    image_depth = G.synthesis(w_pivot.unsqueeze(0), c=cam, noise_mode='const')['image_depth'][0]
+                    depth_loss = depth_loss_model(count + 1, image_depth)
+                    if depth_loss > 0:
+                        depth_loss.backward()
+                    agg_depth_loss += depth_loss
             else:
-                synth_images = G.synthesis(w_pivot.unsqueeze(0), c=images[i].c_item.c, noise_mode='const')['image']
+                synth = G.synthesis(w_pivot.unsqueeze(0), c=images[i].c_item.c, noise_mode='const')
+                synth_images = synth['image']
+                image_depth = synth['image_depth'][0]
+                depth_loss_model.update(count, image_depth)
                 perc_loss = perc(images[i].feature, synth_images, vgg, downsampling=downsampling)
                 mse_loss = mse(images[i].target_tensor, synth_images)
-                loss = 0.1 * mse_loss + perc_loss
+                id_loss = id_loss_model(synth_image=synth_images, target_image=images[i].target_tensor)
+                loss = 0.1 * mse_loss + perc_loss + id_loss
                 loss.backward()
 
                 agg_mse_loss += mse_loss
                 agg_perc_loss += perc_loss
+                agg_id_loss = id_loss
                 agg_loss += loss
 
         if depth_step:
             writer.add_scalar('PTI/Depth Loss', agg_depth_loss / len(target_indices), step)
             optimizer.step()
             optimizer.zero_grad(set_to_none=True)
-            depth_initialized[depth_index] = True
         else:
             writer.add_scalar('PTI/MSE Loss', agg_mse_loss / len(target_indices), step)
             writer.add_scalar('PTI/Perceptual Loss', agg_perc_loss / len(target_indices), step)
+            writer.add_scalar('PTI/ID Loss', agg_id_loss / len(target_indices), step)
             writer.add_scalar('PTI/Combined Loss', agg_loss / len(target_indices), step)
 
             description = f'PTI Inversion: {step + 1:>4d}/{num_steps}'
@@ -105,7 +116,8 @@ def project_pti(
                 synth_image = G.synthesis(w.unsqueeze(0), c=target_cam, noise_mode='const')['image']
                 perc_loss = perc(target_img.feature, synth_image, vgg=vgg, downsampling=downsampling)
                 mse_loss = mse(target_img.target_tensor, synth_image)
-                loss = 0.1 * mse_loss + perc_loss
+                id_loss = id_loss_model(synth_image=synth_image, target_image=images[i].target_tensor)
+                loss = 0.1 * mse_loss + perc_loss + id_loss
                 loss.backward()
 
                 perc_loss_agg += perc_loss
