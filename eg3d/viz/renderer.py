@@ -11,16 +11,20 @@
 import sys
 import copy
 import traceback
+from typing import List
+
 import numpy as np
 import torch
 import torch.fft
 import torch.nn
 import matplotlib.cm
 import dnnlib
+from inversion.utils import interpolate_w_by_cam
 from torch_utils.ops import upfirdn2d
 import legacy # pylint: disable=import-error
 
 from camera_utils import LookAtPoseSampler
+from inversion.load_data import CamItem
 
 
 
@@ -257,6 +261,7 @@ class Renderer:
         fft_beta        = 8,
         input_transform = None,
         untransform     = False,
+        w_offset        = None,
 
         yaw             = 0,
         pitch           = 0,
@@ -346,8 +351,21 @@ class Renderer:
         else:
             synthesis_kwargs.use_cached_backbone = False
         self._last_model_input = w
-        # custom w
-        w = torch.tensor(np.load('out/projected_w.npz')[("w")]).to("cuda")
+        # custom w TODO
+        # checkpoint = np.load('out/20231018-1921_multi_w_targets_5_inter_depth_reg/499_projected_w_mult.npz')
+        checkpoint = np.load("out/20231020-1827_multi_w_targets_5_iter_500_500_inter_depth_reg_depth_loss_x2/499_projected_w_mult.npz")
+
+        if "ws" in checkpoint.keys():
+            ws = [torch.tensor(w_).to("cuda") for w_ in checkpoint['ws']]
+            cs = [torch.tensor(c_).to("cuda") for c_ in checkpoint['cs']]
+            w = interpolate_w_by_cam(ws, cs, c, verbose=True).to("cuda")
+            # w = torch.tensor(self.interpolate_w_by_cam(ws, cs, c.detach().cpu().numpy())).to("cuda")
+        else:
+            w = torch.tensor(checkpoint["w"]).to("cuda")
+
+        if w_offset is not None:
+            w_offset = torch.tensor(w_offset).to("cuda")[None, None, :].repeat(w.shape[0], 1, 1)
+            w += w_offset
         out, layers = self.run_synthesis_net(G, w, c, capture_layer=layer_name, **synthesis_kwargs)
 
         # Update layer list.
@@ -408,6 +426,24 @@ class Renderer:
             fft = (fft / fft.mean()).log10() * 10 # dB
             fft = self._apply_cmap((fft / fft_range_db + 1) / 2)
             res.image = torch.cat([img.expand_as(fft), fft], dim=1)
+
+    @staticmethod
+    def interpolate_w_by_cam(ws: List[np.ndarray], cs: List[np.ndarray], c: np.ndarray):
+        angle = np.array([CamItem(c).xz_angle()])
+        cs = np.array([CamItem(cs[i]).xz_angle() for i in range(len(cs))])
+
+        cs_diff = np.abs(cs - angle)
+        closest_index, second_closest_index = np.argpartition(cs_diff, 2)[:2]
+        index_left = np.minimum(closest_index, second_closest_index)
+        index_right = np.maximum(closest_index, second_closest_index)
+
+        total_dist = np.abs(cs[index_left] - cs[index_right])
+        dist_1 = np.abs(cs[index_left] - angle)
+        mag = dist_1 / total_dist
+        w_int = ws[index_left] * (1 - mag) + ws[index_right] * mag
+        print(f"w{index_left} * {(1 - mag)} + w{index_right} * {mag}")
+        return w_int
+
 
     @staticmethod
     def run_synthesis_net(net, *args, capture_layer=None, **kwargs): # => out, layers
