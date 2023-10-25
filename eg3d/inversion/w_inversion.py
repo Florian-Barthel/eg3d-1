@@ -32,7 +32,8 @@ def project(
         optimize_cam=False,
         target_indices,
         downsampling=True,
-        writer: SummaryWriter
+        writer: SummaryWriter,
+        w_plus: bool = True
 ):
     assert images[0].target_tensor[0].shape == (G.img_channels, G.img_resolution, G.img_resolution)
 

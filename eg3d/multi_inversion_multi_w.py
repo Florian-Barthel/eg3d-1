@@ -19,7 +19,6 @@ from inversion.multi_w_inversion import project
 from inversion.multi_pti_inversion import project_pti
 from inversion.load_data import ImageItem, load
 from inversion.image_selection import select_evenly_interpolate
-from run_metrics import run as run_all_metrics
 
 
 @click.command()
@@ -39,6 +38,7 @@ from run_metrics import run as run_all_metrics
 @click.option('--optimize-cam', type=bool, required=True)
 @click.option('--use-interpolation', type=bool, required=True)
 @click.option('--depth-reg', type=bool, required=True)
+@click.option('--w-norm-reg', type=bool, required=False, default=True)
 def run_projection(
         network_pkl: str,
         target_fname: str,
@@ -53,7 +53,8 @@ def run_projection(
         continue_w: str,
         optimize_cam: bool,
         use_interpolation: bool,
-        depth_reg: bool
+        depth_reg: bool,
+        w_norm_reg: bool
 ):
     cur_time = time.strftime("%Y%m%d-%H%M", time.localtime())
     desc = ("/" + cur_time)
@@ -63,7 +64,9 @@ def run_projection(
     desc += "_inter" if use_interpolation else ""
     desc += "_depth_reg" if depth_reg else ""
     desc += "_cam_opt" if optimize_cam else ""
-    desc += "_depth_loss_x2"
+    desc += "_without_norm_reg" if not w_norm_reg else ""
+    data_index = target_fname.split("/")[-1]
+    desc += f"_data_{data_index}"
 
     os.makedirs(outdir, exist_ok=True)
     outdir += desc
@@ -99,7 +102,8 @@ def run_projection(
         continue_checkpoint=continue_w,
         use_interpolation=use_interpolation,
         optimize_cam=optimize_cam,
-        use_depth_reg=depth_reg
+        use_depth_reg=depth_reg,
+        use_w_norm_reg=w_norm_reg
     )
     time_opt_w = (perf_counter() - start_time)
     start_time = perf_counter()
@@ -176,7 +180,6 @@ def run_projection(
             G_new.cpu()
         video.close()
 
-    run_all_metrics(data_path=target_fname, num_samples=200, rundir=outdir, original_network=network_pkl)
 
 
 # ----------------------------------------------------------------------------

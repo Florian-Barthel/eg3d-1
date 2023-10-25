@@ -353,7 +353,7 @@ class Renderer:
         self._last_model_input = w
         # custom w TODO
         # checkpoint = np.load('out/20231018-1921_multi_w_targets_5_inter_depth_reg/499_projected_w_mult.npz')
-        checkpoint = np.load("out/20231020-1827_multi_w_targets_5_iter_500_500_inter_depth_reg_depth_loss_x2/499_projected_w_mult.npz")
+        checkpoint = np.load("out/20231024-0925_multi_w_targets_5_iter_500_500_inter_depth_reg_data_6/499_projected_w_mult.npz")
 
         if "ws" in checkpoint.keys():
             ws = [torch.tensor(w_).to("cuda") for w_ in checkpoint['ws']]

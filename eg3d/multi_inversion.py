@@ -18,7 +18,6 @@ from inversion.w_inversion import project
 from inversion.pti_inversion import project_pti
 from inversion.load_data import ImageItem, load
 from inversion.image_selection import select_evenly
-from run_metrics import run as run_all_metrics
 
 
 
@@ -53,6 +52,8 @@ def run_projection(
     desc = ("/" + cur_time)
     desc += f"_multiview_{num_targets}"
     desc += f"_iter_{num_steps}_{num_steps_pti}"
+    data_index = target_fname.split("/")[-1]
+    desc += f"_data_{data_index}"
     os.makedirs(outdir, exist_ok=True)
     outdir += desc
     writer = SummaryWriter(outdir)
@@ -83,7 +84,8 @@ def run_projection(
         target_indices=target_indices,
         writer=writer,
         downsampling=downsampling,
-        optimize_cam=optimize_cam
+        optimize_cam=optimize_cam,
+        w_plus=True
     )
     time_project_w = perf_counter() - start_time
 
@@ -152,7 +154,6 @@ def run_projection(
             G_new.cpu()
         video.close()
 
-    run_all_metrics(target_fname, 200, outdir, network_pkl)
 # ----------------------------------------------------------------------------
 
 if __name__ == "__main__":

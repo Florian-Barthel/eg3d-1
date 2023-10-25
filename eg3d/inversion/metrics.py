@@ -1,4 +1,7 @@
+import PIL.Image
+import numpy as np
 import torch
+
 from models.encoders.model_irse import IR_101
 from models.mtcnn.mtcnn import MTCNN
 from pytorch_msssim import MS_SSIM
@@ -78,3 +81,26 @@ class Metrics:
 
         with torch.no_grad():
             return float(self.ms_ssim_module(X.unsqueeze(0).to(device), Y.unsqueeze(0).to(device)))
+
+
+class DepthMetric:
+    def __init__(self, num_targets):
+        self.depth_array = np.zeros([num_targets, num_targets, 128, 128])
+        self.num_targets = num_targets
+        self.counter = np.zeros(num_targets, dtype=int)
+
+    def update(self, view_index, depth_image):
+        self.depth_array[view_index, self.counter[view_index]] = depth_image[0].detach().cpu().numpy()
+        self.counter[view_index] += 1
+
+    def calc_mean_stddev(self, path=None):
+        std = np.std(self.depth_array, axis=1)
+        print(std.shape)
+        if path is not None:
+            PIL.Image.fromarray(std[self.num_targets // 2], mode='L').save(path)
+        return np.mean(std)
+
+
+if __name__ == "__main__":
+    d = DepthMetric(200)
+    print()

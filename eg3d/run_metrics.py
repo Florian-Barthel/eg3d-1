@@ -10,7 +10,7 @@ import dnnlib
 import legacy
 from inversion.image_selection import select_evenly
 from inversion.load_data import load
-from inversion.metrics import Metrics
+from inversion.metrics import Metrics, DepthMetric
 from inversion.utils import interpolate_w_by_cam
 
 
@@ -19,11 +19,14 @@ from inversion.utils import interpolate_w_by_cam
 @click.option('--num-samples', required=True, type=int)
 @click.option('--rundir', required=True, metavar='DIR')
 @click.option('--original-network', required=True, metavar='FILE')
-def run(
+@click.option('--run-w-plus', type=bool, required=True)
+
+def run_metric(
         data_path: str,
         num_samples: int,
         rundir: str,
-        original_network: str
+        original_network: str,
+        run_w_plus: bool
 ):
     network_pkl = rundir + "/fintuned_generator.pkl"
     w_files = glob.glob(rundir + "/*.npz")
@@ -50,9 +53,16 @@ def run(
     # load data and latent
     checkpoint = np.load(w_path)
     images = load(data_path, 512, device=device)
+    result = {}
 
-    for desc, network in [("original_net", original_network), ("PTI_net", network_pkl)]:
+    if run_w_plus:
+        networks = [("original_net", original_network), ("PTI_net", network_pkl)]
+    else:
+        networks = [("PTI_net", network_pkl)]
+
+    for desc, network in networks:
         # Load networks.
+        result[desc] = {}
         print('Loading networks from "%s"...' % network)
         device = torch.device('cuda')
         with dnnlib.util.open_url(network) as fp:
@@ -91,6 +101,11 @@ def run(
         id_sim = np.array(id_sim)
         angles = np.array(angles)
 
+        result[desc]["ms_ssim"] = np.mean(ms_ssim)
+        result[desc]["mse"] = np.mean(mse)
+        result[desc]["lpips"] = np.mean(lpips)
+        result[desc]["id_sim"] = np.mean(id_sim)
+
         np.savez(f"{rundir}/{desc}_ms_ssim.npz", values=ms_ssim, mean=np.mean(ms_ssim))
         np.savez(f"{rundir}/{desc}_mse.npz", values=mse, mean=np.mean(mse))
         np.savez(f"{rundir}/{desc}_lpips.npz", values=lpips, mean=np.mean(lpips))
@@ -106,6 +121,8 @@ def run(
         print(f"{np.mean(mse)}\t{np.mean(lpips)}\t{np.mean(ms_ssim)}\t{np.mean(id_sim)}")
         print(f"{desc}-------")
 
+    return result
+
 
 if __name__ == "__main__":
-    run()
+    run_metric()

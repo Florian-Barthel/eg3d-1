@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn.functional as F
 
@@ -77,4 +78,22 @@ class DepthLoss:
     def update(self, view_index, depth_image):
         self.depth_list[view_index] = depth_image.detach()
         self.initialized_list[view_index] = True
+
+
+class DepthLossAll:
+    def __init__(self, num_targets, depth_image_size=128, depth_multiplier=1.0):
+        # cs, ws, H, W
+        self.depth_list = torch.zeros([num_targets, num_targets, depth_image_size, depth_image_size], dtype=torch.float32).to("cuda")
+        # cs
+        self.initialized_list = np.zeros([num_targets]).astype(bool)
+        self.depth_multiplier = depth_multiplier
+
+    def __call__(self, view_index, w_index, depth_image):
+        loss = 0
+        if self.initialized_list[view_index]:
+            loss += mse(depth_image, torch.mean(self.depth_list[view_index], dim=0)) * self.depth_multiplier
+        self.depth_list[view_index, w_index] = depth_image.detach()[0]
+        return loss
+
+
 
