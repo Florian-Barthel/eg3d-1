@@ -86,9 +86,26 @@ if __name__ == "__main__":
     # MultiWHandler(dataset="../dataset_preprocessing/ffhq/5", continue_w="out/20231023-1115_multiview_7_iter_500_500_data_5/499_projected_w.npz", use_interpolation=True, depth_reg=True)
     # MultiWHandler(dataset="../dataset_preprocessing/ffhq/6", continue_w="out/20231023-1147_multiview_7_iter_500_500_data_6/499_projected_w.npz", use_interpolation=True, depth_reg=True)
 
-    SingleWHandler(dataset="../dataset_preprocessing/ffhq/2", num_targets=5)
-    SingleWHandler(dataset="../dataset_preprocessing/ffhq/3", num_targets=5)
-    SingleWHandler(dataset="../dataset_preprocessing/ffhq/4", num_targets=5)
-    SingleWHandler(dataset="../dataset_preprocessing/ffhq/5", num_targets=5)
-    SingleWHandler(dataset="../dataset_preprocessing/ffhq/6", num_targets=5)
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/1", num_targets=11)
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/2", num_targets=11)
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/3", num_targets=11)
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/4", num_targets=11)
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/5", num_targets=11)
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/6", num_targets=11)
 
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/1", num_targets=13)
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/2", num_targets=13)
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/3", num_targets=13)
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/4", num_targets=13)
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/5", num_targets=13)
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/6", num_targets=13)
+
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/1", num_targets=15)
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/2", num_targets=15)
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/3", num_targets=15)
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/4", num_targets=15)
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/5", num_targets=15)
+    SingleWHandler(dataset="../dataset_preprocessing/ffhq/6", num_targets=15)
+
+
+# nebentätigkeitsanzeige, equipmentmeldung,

@@ -42,9 +42,7 @@ def select_evenly_interpolate(images: List[ImageItem], num_targets: int):
 
 
 if __name__ == "__main__":
-    images = load("../../dataset_preprocessing/ffhq/1", 512)
-    target_indices, interpolated_indices = select_evenly_interpolate(images, 10)
-    target_images = [images[i] for i in target_indices]
-    interpolated_images = [images[i] for i in interpolated_indices]
-    compare_cam_plot_interpolate(target_images, interpolated_images)
-    print()
+    for i in range(6):
+        images = load(f"../../dataset_preprocessing/ffhq/{i + 1}", 512)
+        target_indices = select_evenly(images, 1)
+        print(i + 1, target_indices)

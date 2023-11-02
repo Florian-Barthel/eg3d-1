@@ -49,6 +49,7 @@ def run(
     checkpoint = np.load(w_path)
     images = load(data_path, 512, device=device)
     target_indices = select_evenly(images, num_samples)
+    target_indices = target_indices[len(target_indices) // 2:]
 
     # reals
     target_images = []

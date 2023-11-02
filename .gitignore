@@ -28,3 +28,4 @@ eg3d_results
 .idea
 dataset_preprocessing/ffhq
 eg3d/pretrained_models
+eg3d/_screenshots/*

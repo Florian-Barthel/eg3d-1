@@ -353,7 +353,23 @@ class Renderer:
         self._last_model_input = w
         # custom w TODO
         # checkpoint = np.load('out/20231018-1921_multi_w_targets_5_inter_depth_reg/499_projected_w_mult.npz')
-        checkpoint = np.load("out/20231024-0925_multi_w_targets_5_iter_500_500_inter_depth_reg_data_6/499_projected_w_mult.npz")
+
+        # edit examples
+        # checkpoint = np.load("out/20231024-1256_multi_w_targets_5_iter_500_500_inter_depth_reg_data_2/499_projected_w_mult.npz")
+        # /home/barthel/Documents/eg3d-1/eg3d/out/20231024-1256_multi_w_targets_5_iter_500_500_inter_depth_reg_data_2/fintuned_generator.pkl
+
+        # checkpoint = np.load("out/20231024-1914_multi_w_targets_5_iter_500_500_inter_depth_reg_data_3/499_projected_w_mult.npz")
+        # /home/barthel/Documents/eg3d-1/eg3d/out/20231024-1914_multi_w_targets_5_iter_500_500_inter_depth_reg_data_3/fintuned_generator.pkl
+
+        checkpoint = np.load("out/20231024-1458_multi_w_targets_5_iter_500_500_inter_depth_reg_data_4/499_projected_w_mult.npz")
+        # /home/barthel/Documents/eg3d-1/eg3d/out/20231024-1458_multi_w_targets_5_iter_500_500_inter_depth_reg_data_4/fintuned_generator.pkl
+
+        # checkpoint = np.load("out/20231024-1550_multi_w_targets_5_iter_500_500_inter_depth_reg_data_5/499_projected_w_mult.npz")
+        # /home/barthel/Documents/eg3d-1/eg3d/out/20231024-1550_multi_w_targets_5_iter_500_500_inter_depth_reg_data_5/fintuned_generator.pkl
+
+        # checkpoint = np.load("out/20231024-1642_multi_w_targets_5_iter_500_500_inter_depth_reg_data_6/499_projected_w_mult.npz")
+
+
 
         if "ws" in checkpoint.keys():
             ws = [torch.tensor(w_).to("cuda") for w_ in checkpoint['ws']]
