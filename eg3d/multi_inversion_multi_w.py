@@ -35,7 +35,6 @@ from inversion.image_selection import select_evenly_interpolate
 @click.option('--num-targets', help='Number of targets to use for inversion', default=10, show_default=True)
 @click.option('--downsampling', help='Downsample images from 512 to 256', type=bool, required=True)
 @click.option('--continue-w', help='numpy .npz file to load the latent vector', required=True, metavar='FILE')
-@click.option('--optimize-cam', type=bool, required=True)
 @click.option('--use-interpolation', type=bool, required=True)
 @click.option('--depth-reg', type=bool, required=True)
 @click.option('--w-norm-reg', type=bool, required=False, default=True)
@@ -51,7 +50,6 @@ def run_projection(
         num_targets: int,
         downsampling: bool,
         continue_w: str,
-        optimize_cam: bool,
         use_interpolation: bool,
         depth_reg: bool,
         w_norm_reg: bool
@@ -63,7 +61,6 @@ def run_projection(
     desc += f"_iter_{num_steps}_{num_steps_pti}"
     desc += "_inter" if use_interpolation else ""
     desc += "_depth_reg" if depth_reg else ""
-    desc += "_cam_opt" if optimize_cam else ""
     desc += "_without_norm_reg" if not w_norm_reg else ""
     data_index = target_fname.split("/")[-1]
     desc += f"_data_{data_index}"
@@ -101,7 +98,6 @@ def run_projection(
         downsampling=downsampling,
         continue_checkpoint=continue_w,
         use_interpolation=use_interpolation,
-        optimize_cam=optimize_cam,
         use_depth_reg=depth_reg,
         use_w_norm_reg=w_norm_reg
     )
@@ -133,7 +129,6 @@ def run_projection(
             "num_steps_pti": num_steps_pti,
             "num_targets": num_targets,
             "downsampling": downsampling,
-            "optimize_cam": optimize_cam,
             "time": cur_time,
             "time_w": time_opt_w,
             "time_pti": time_opt_pti,

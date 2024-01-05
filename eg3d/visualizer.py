@@ -316,7 +316,9 @@ def main(
         'https://api.ngc.nvidia.com/v2/models/nvidia/research/eg3d/versions/1/files/shapenetcars128-64.pkl',
         "/home/barthel/Documents/eg3d-1/eg3d/out/20231018-1921_multi_w_targets_5_inter_depth_reg/fintuned_generator.pkl",
         "/home/barthel/Documents/eg3d-1/eg3d/networks/var3-128.pkl",
-        "/home/barthel/Documents/eg3d-1/eg3d/out/20231020-1827_multi_w_targets_5_iter_500_500_inter_depth_reg_depth_loss_x2/fintuned_generator.pkl"
+        "/home/barthel/Documents/eg3d-1/eg3d/out/20231020-1827_multi_w_targets_5_iter_500_500_inter_depth_reg_depth_loss_x2/fintuned_generator.pkl",
+        "C:\\Users\\flori\\Documents\\eg3d-1\\eg3d\\out\\20231020-1827_multi_w_targets_5_iter_500_500_inter_depth_reg_depth_loss_x2\\fintuned_generator.pkl",
+        "C:/Users/flori/Documents/eg3d-1/eg3d/out/20240104-1233_multi_w_targets_5_iter_500_500_inter_depth_reg_data_std_neu/fintuned_generator.pkl"
     ]
 
     # Populate recent pickles list with pretrained model URLs.

@@ -14,6 +14,7 @@ from preprocess import align_img
 from PIL import Image
 import numpy as np
 import sys
+from tqdm import tqdm
 sys.path.append('Deep3DFaceRecon_pytorch')
 from Deep3DFaceRecon_pytorch.util.load_mats import load_lm3d
 
@@ -33,7 +34,7 @@ if __name__ == '__main__':
     if not os.path.exists(out_dir):
         os.makedirs(out_dir, exist_ok=True)
         
-    for img_file, lm_file in zip(img_files, lm_files):
+    for img_file, lm_file in tqdm(zip(img_files, lm_files)):
 
         img_path = os.path.join(args.indir, img_file)
         lm_path = os.path.join(lm_dir, lm_file)

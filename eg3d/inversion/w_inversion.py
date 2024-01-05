@@ -44,7 +44,6 @@ def project(
     noise_bufs = {name: buf for (name, buf) in G.backbone.synthesis.named_buffers() if 'noise_const' in name}
 
     vgg = NvidiaVGG16(device)
-    # vgg = CustomVGG("vgg19").to(device)
     create_vgg_features(images, vgg, downsampling=downsampling)
     id_loss_model = IDLoss()
 
@@ -165,7 +164,7 @@ def project(
                     synth_image = (synth_image + 1) * (255 / 2)
                     synth_image = synth_image.clamp(0, 255).to(torch.uint8)[0]
                 target_image = ((images[i].target_tensor[0] + 1) * (255 / 2)).to(torch.uint8)
-                synth_image_comb = torch.concatenate([target_image, synth_image], dim=-1)
+                synth_image_comb = torch.concat([target_image, synth_image], dim=-1)
                 writer.add_image(f"W/Inversion {i}", synth_image_comb, global_step=step)
 
                 if i == 0:

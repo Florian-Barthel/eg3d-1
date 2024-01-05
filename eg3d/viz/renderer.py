@@ -361,7 +361,7 @@ class Renderer:
         # checkpoint = np.load("out/20231024-1914_multi_w_targets_5_iter_500_500_inter_depth_reg_data_3/499_projected_w_mult.npz")
         # /home/barthel/Documents/eg3d-1/eg3d/out/20231024-1914_multi_w_targets_5_iter_500_500_inter_depth_reg_data_3/fintuned_generator.pkl
 
-        checkpoint = np.load("out/20231024-1458_multi_w_targets_5_iter_500_500_inter_depth_reg_data_4/499_projected_w_mult.npz")
+        checkpoint = np.load("out/20240104-1233_multi_w_targets_5_iter_500_500_inter_depth_reg_data_std_neu/499_projected_w_mult.npz")
         # /home/barthel/Documents/eg3d-1/eg3d/out/20231024-1458_multi_w_targets_5_iter_500_500_inter_depth_reg_data_4/fintuned_generator.pkl
 
         # checkpoint = np.load("out/20231024-1550_multi_w_targets_5_iter_500_500_inter_depth_reg_data_5/499_projected_w_mult.npz")

@@ -81,7 +81,7 @@ def project_pti(
                     synth_image = (synth_image + 1) * (255 / 2)
                     synth_image = synth_image.clamp(0, 255).to(torch.uint8)[0]
                 target_image = ((images[i].target_tensor[0] + 1) * (255 / 2)).to(torch.uint8)
-                synth_image_comb = torch.concatenate([target_image, synth_image], dim=-1)
+                synth_image_comb = torch.concat([target_image, synth_image], dim=-1)
                 writer.add_image(f"PTI/Inversion {i}", synth_image_comb, global_step=step)
 
                 if i == 0:

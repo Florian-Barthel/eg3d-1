@@ -18,13 +18,11 @@ def project(
         *,
         num_steps=1000,
         w_avg_samples=10000,
-        initial_learning_rate=0.1,
+        initial_learning_rate=0.01, # 0.1
         lr_rampdown_length=0.25,
         lr_rampup_length=0.05,
-        optimize_noise=False,
         device: torch.device,
         outdir: str,
-        optimize_cam=False,
         target_indices: List[int],
         inter_indices: List[int],
         downsampling=True,
@@ -154,7 +152,7 @@ def project(
                     synth_image = (synth_image + 1) * (255 / 2)
                     synth_image = synth_image.clamp(0, 255).to(torch.uint8)[0]
                 target_image = ((images[i].target_tensor[0] + 1) * (255 / 2)).to(torch.uint8)
-                synth_image_comb = torch.concatenate([target_image, synth_image], dim=-1)
+                synth_image_comb = torch.concat([target_image, synth_image], dim=-1)
                 writer.add_image(f"W/Inversion {i}", synth_image_comb, global_step=step)
                 if i == 0:
                     synth_image = synth_image.permute(1, 2, 0).cpu().numpy()

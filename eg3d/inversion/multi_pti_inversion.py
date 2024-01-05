@@ -19,8 +19,6 @@ def project_pti(
         *,
         num_steps=1000,
         initial_learning_rate=3e-4,
-        lr_rampdown_length=0.25,
-        lr_rampup_length=0.05,
         device: torch.device,
         outdir: str,
         target_indices: List[int],
@@ -31,7 +29,7 @@ def project_pti(
         use_depth_reg: bool
 ):
     assert images[0].target_tensor[0].shape == (G.img_channels, G.img_resolution, G.img_resolution)
-    G = copy.deepcopy(G).train().requires_grad_(True).to(device)  # type: ignore
+    G = copy.deepcopy(G).train().requires_grad_(True).to(device)
     vgg = NvidiaVGG16(device=device)
     create_vgg_features(images, vgg, downsampling)
     id_loss_model = IDLoss()
@@ -116,7 +114,7 @@ def project_pti(
                     synth_image = (synth_image + 1) * (255 / 2)
                     synth_image = synth_image.clamp(0, 255).to(torch.uint8)[0]
                 target_image = ((images[i].target_tensor[0] + 1) * (255 / 2)).to(torch.uint8)
-                synth_image_comb = torch.concatenate([target_image, synth_image], dim=-1)
+                synth_image_comb = torch.concat([target_image, synth_image], dim=-1)
                 writer.add_image(f"PTI/Inversion {i}", synth_image_comb, global_step=step)
                 if i == 0:
                     synth_image = synth_image.permute(1, 2, 0).cpu().numpy()

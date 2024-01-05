@@ -72,16 +72,18 @@ def load(folder: str, img_resolution: int, device="cpu") -> List[ImageItem]:
     dataset = dnnlib.util.construct_class_by_name(**dataset_kwargs)
     images = []
 
-    use_file_names = sorted(fnmatch.filter(dataset._image_fnames, "[!crop]*[0-9].png"))
-    use_file_names_sorted = ["" for _ in range(len(use_file_names))]
-    for file_name in use_file_names:
-        index = re.findall(r'\d+', file_name)[0]
-        use_file_names_sorted[int(index)] = file_name
+    use_file_names = sorted(fnmatch.filter(dataset._image_fnames, "[!epoch][!crop]*[0-9].png"))
+    # use_file_names_sorted = ["" for _ in range(len(use_file_names))]
+    # for file_name in use_file_names:
+    #     index = re.findall(r'\d+', file_name)[0]
+    #     use_file_names_sorted[int(index)] = file_name
+    # use_file_names = use_file_names_sorted
+
     label_dict = dataset.load_label_dict()
 
-    for idx in tqdm(range(len(use_file_names_sorted)), desc="Loading Data"):
-        target_fname = dataset._path + "/" + use_file_names_sorted[idx]
-        c = torch.tensor(label_dict[use_file_names_sorted[idx]]).to(device)[None, ...]
+    for filename in tqdm(use_file_names, desc="Loading Data"):
+        target_fname = dataset._path + "/" + filename
+        c = torch.tensor(label_dict[filename]).to(device)[None, ...]
         images.append(ImageItem(target_fname, c, device, img_resolution))
 
     return images
