@@ -26,6 +26,8 @@ stylegan3/results
 eg3d/results
 eg3d_results
 .idea
-dataset_preprocessing/ffhq
+dataset_preprocessing/ffhq/lineup
+dataset_preprocessing/ffhq/neurohum
+dataset_preprocessing/ffhq/Neurohum_all
 eg3d/pretrained_models
 eg3d/_screenshots/*
