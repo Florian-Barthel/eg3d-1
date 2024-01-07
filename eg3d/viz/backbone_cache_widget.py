@@ -16,7 +16,7 @@ from gui_utils import imgui_utils
 class BackboneCacheWidget:
     def __init__(self, viz):
         self.viz            = viz
-        self.cache_backbone = True
+        self.cache_backbone = False
 
     @imgui_utils.scoped_by_object_id
     def __call__(self, show=True):

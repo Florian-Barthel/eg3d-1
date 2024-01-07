@@ -1,3 +1,15 @@
+## 3D Multiview Inversion<br>
+
+
+### Prepare Video Data
+
+### Run Inversion
+
+Multi-view Inversion
+
+Multi-latent Inversion
+
+
 ## Efficient Geometry-aware 3D Generative Adversarial Networks (EG3D)<br><sub>Official PyTorch implementation of the CVPR 2022 paper</sub>
 
 ![Teaser image](./docs/teaser.jpeg)

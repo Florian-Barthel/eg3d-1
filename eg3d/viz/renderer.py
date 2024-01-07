@@ -11,16 +11,22 @@
 import sys
 import copy
 import traceback
+from typing import List
+from pathlib import Path
+
 import numpy as np
 import torch
 import torch.fft
 import torch.nn
 import matplotlib.cm
 import dnnlib
+from inversion.utils import interpolate_w_by_cam
 from torch_utils.ops import upfirdn2d
 import legacy # pylint: disable=import-error
 
 from camera_utils import LookAtPoseSampler
+from inversion.load_data import CamItem
+from utils.run_dir import get_pkl_and_w
 
 
 
@@ -124,6 +130,13 @@ def _apply_affine_transformation(x, mat, up=4, **filter_kwargs):
 
 class Renderer:
     def __init__(self):
+        # cache w's
+        self.last_pkl = None
+        self.cs = []
+        self.ws = []
+        self.use_interpolate = False
+        self.checkpoint = None
+
         self._device        = torch.device('cuda')
         self._pkl_data      = dict()    # {pkl: dict | CapturedException, ...}
         self._networks      = dict()    # {cache_key: torch.nn.Module, ...}
@@ -257,6 +270,7 @@ class Renderer:
         fft_beta        = 8,
         input_transform = None,
         untransform     = False,
+        w_offset        = None,
 
         yaw             = 0,
         pitch           = 0,
@@ -346,8 +360,11 @@ class Renderer:
         else:
             synthesis_kwargs.use_cached_backbone = False
         self._last_model_input = w
-        # custom w
-        w = torch.tensor(np.load('out/projected_w.npz')[("w")]).to("cuda")
+        w = self.get_w(pkl, c)
+
+        if w_offset is not None:
+            w_offset = torch.tensor(w_offset).to("cuda")[None, None, :].repeat(w.shape[0], 1, 1)
+            w += w_offset
         out, layers = self.run_synthesis_net(G, w, c, capture_layer=layer_name, **synthesis_kwargs)
 
         # Update layer list.
@@ -410,6 +427,24 @@ class Renderer:
             res.image = torch.cat([img.expand_as(fft), fft], dim=1)
 
     @staticmethod
+    def interpolate_w_by_cam(ws: List[np.ndarray], cs: List[np.ndarray], c: np.ndarray):
+        angle = np.array([CamItem(c).xz_angle()])
+        cs = np.array([CamItem(cs[i]).xz_angle() for i in range(len(cs))])
+
+        cs_diff = np.abs(cs - angle)
+        closest_index, second_closest_index = np.argpartition(cs_diff, 2)[:2]
+        index_left = np.minimum(closest_index, second_closest_index)
+        index_right = np.maximum(closest_index, second_closest_index)
+
+        total_dist = np.abs(cs[index_left] - cs[index_right])
+        dist_1 = np.abs(cs[index_left] - angle)
+        mag = dist_1 / total_dist
+        w_int = ws[index_left] * (1 - mag) + ws[index_right] * mag
+        print(f"w{index_left} * {(1 - mag)} + w{index_right} * {mag}")
+        return w_int
+
+
+    @staticmethod
     def run_synthesis_net(net, *args, capture_layer=None, **kwargs): # => out, layers
         submodule_names = {mod: name for name, mod in net.named_modules()}
         unique_names = set()
@@ -447,4 +482,17 @@ class Renderer:
             hook.remove()
         return out, layers
 
-#----------------------------------------------------------------------------
+    def get_w(self, pkl, c):
+        if pkl != self.last_pkl:
+            self.last_pkl = pkl
+            _, w_path = get_pkl_and_w(str(Path(pkl).parent))
+            self.checkpoint = np.load(w_path)
+            self.use_interpolate = "ws" in self.checkpoint.keys()
+            if self.use_interpolate:
+                self.ws = [torch.tensor(w_).to("cuda") for w_ in self.checkpoint['ws']]
+                self.cs = [torch.tensor(c_).to("cuda") for c_ in self.checkpoint['cs']]
+
+        if self.use_interpolate:
+            return interpolate_w_by_cam(self.ws, self.cs, c, verbose=False).to("cuda")
+        else:
+            return torch.tensor(self.checkpoint["w"]).to("cuda")

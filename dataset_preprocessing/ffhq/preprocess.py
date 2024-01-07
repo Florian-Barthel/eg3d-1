@@ -97,8 +97,9 @@ def crop(img, bbox):
     else:
         return padded_img, 0
 
+    # utils for landmark detection
 
-# utils for landmark detection
+
 def scale_trans(img, lm, t, s):
     imgw = img.shape[1]
     imgh = img.shape[0]
@@ -193,13 +194,14 @@ def align_img(img, lm, lm3D, mask=None, target_size=224., rescale_factor=102.):
     else:
         lm5p = lm
 
-    # calculate translation and scale factors using 5 facial landmarks and standard landmarks of a 3D face
+        # calculate translation and scale factors using 5 facial landmarks and standard landmarks of a 3D face
     t, s = POS(lm5p.transpose(), lm3D.transpose())
     s = rescale_factor / s
 
     # processing the image
     img_new, lm_new, mask_new = resize_n_crop_img(img, lm, t, s, target_size=target_size, mask=mask)
     trans_params = np.array([w0, h0, s, t[0], t[1]])
+    # trans_params = np.array([w0, h0, s, t[0, 0], t[1, 0]])
 
     return trans_params, img_new, lm_new, mask_new
 
