@@ -133,25 +133,30 @@ def run_projection(
         pickle.dump(network_data, f)
 
     # Render debug output: optional video and projected image and W vector.
-    os.makedirs(outdir, exist_ok=True)
     if save_video:
+        target_indices = select_evenly(images, 5)
         video = imageio.get_writer(f'{outdir}/proj.mp4', mode='I', fps=fps, codec='libx264', bitrate='16M')
         print(f'Saving optimization progress video "{outdir}/proj.mp4"')
-        for projected_w in projected_w_steps[::2]:
-            synth_image = G.synthesis(projected_w.unsqueeze(0).to(device), c=images[0].c_item.c, noise_mode='const')[
-                'image']
-            synth_image = (synth_image + 1) * (255 / 2)
-            synth_image = synth_image.permute(0, 2, 3, 1).clamp(0, 255).to(torch.uint8)[0].cpu().numpy()
-            video.append_data(np.concatenate([images[0].t_uint8, synth_image], axis=1))
+        for projected_w in projected_w_steps[::]:
+            views = []
+            for i, target_index in enumerate(target_indices):
+                cam_i = images[target_index].c_item.c
+                synth_image = G.synthesis(projected_w.unsqueeze(0).to(device), c=cam_i, noise_mode='const')['image']
+                synth_image = (synth_image + 1) * (255 / 2)
+                synth_image = synth_image.permute(0, 2, 3, 1).clamp(0, 255).to(torch.uint8)[0].cpu().numpy()
+                views.append(np.concatenate([images[target_index].t_uint8, synth_image], axis=0))
+            video.append_data(np.concatenate(views, axis=1))
         for G_new in G_steps:
             G_new.to(device)
-            synth_image = \
-            G_new.synthesis(projected_w_steps[-1].unsqueeze(0).to(device), c=images[0].c_item.c, noise_mode='const')[
-                'image']
-            synth_image = (synth_image + 1) * (255 / 2)
-            synth_image = synth_image.permute(0, 2, 3, 1).clamp(0, 255).to(torch.uint8)[0].cpu().numpy()
-            video.append_data(np.concatenate([images[0].t_uint8, synth_image], axis=1))
+            views = []
+            for i, target_index in enumerate(target_indices):
+                cam_i = images[target_index].c_item.c
+                synth_image = G_new.synthesis(projected_w_steps[-1].unsqueeze(0).to(device), c=cam_i, noise_mode='const')['image']
+                synth_image = (synth_image + 1) * (255 / 2)
+                synth_image = synth_image.permute(0, 2, 3, 1).clamp(0, 255).to(torch.uint8)[0].cpu().numpy()
+                views.append(np.concatenate([images[target_index].t_uint8, synth_image], axis=0))
             G_new.cpu()
+            video.append_data(np.concatenate(views, axis=1))
         video.close()
 
 # ----------------------------------------------------------------------------

@@ -16,6 +16,9 @@ import json
 import argparse
 import scipy.io
 import sys
+
+from tqdm import tqdm
+
 sys.path.append('Deep3DFaceRecon_pytorch')
 from Deep3DFaceRecon_pytorch.models.bfm import ParametricFaceModel
 
@@ -32,7 +35,7 @@ outAll={}
 
 face_model = ParametricFaceModel(bfm_folder='Deep3DFaceRecon_pytorch/BFM')
 
-for src_filename in npys:
+for src_filename in tqdm(npys):
     src = os.path.join(in_root, src_filename)
     
     dict_load = scipy.io.loadmat(src)

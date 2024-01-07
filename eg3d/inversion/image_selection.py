@@ -9,7 +9,7 @@ from inversion.load_data import ImageItem
 from inversion.plots import compare_cam_plot_interpolate
 
 
-def select_evenly(images: List[ImageItem], num_targets: int):
+def select_evenly(images: List[ImageItem], num_targets: int) -> List[int]:
     all_angles = torch.tensor([item.c_item.xz_angle() for item in images])
     min_angle = torch.min(all_angles)
     max_angle = torch.max(all_angles)

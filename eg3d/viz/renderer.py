@@ -12,6 +12,7 @@ import sys
 import copy
 import traceback
 from typing import List
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -25,6 +26,7 @@ import legacy # pylint: disable=import-error
 
 from camera_utils import LookAtPoseSampler
 from inversion.load_data import CamItem
+from utils.run_dir import get_pkl_and_w
 
 
 
@@ -128,6 +130,13 @@ def _apply_affine_transformation(x, mat, up=4, **filter_kwargs):
 
 class Renderer:
     def __init__(self):
+        # cache w's
+        self.last_pkl = None
+        self.cs = []
+        self.ws = []
+        self.use_interpolate = False
+        self.checkpoint = None
+
         self._device        = torch.device('cuda')
         self._pkl_data      = dict()    # {pkl: dict | CapturedException, ...}
         self._networks      = dict()    # {cache_key: torch.nn.Module, ...}
@@ -351,33 +360,7 @@ class Renderer:
         else:
             synthesis_kwargs.use_cached_backbone = False
         self._last_model_input = w
-        # custom w TODO
-        # checkpoint = np.load('out/20231018-1921_multi_w_targets_5_inter_depth_reg/499_projected_w_mult.npz')
-
-        # edit examples
-        # checkpoint = np.load("out/20231024-1256_multi_w_targets_5_iter_500_500_inter_depth_reg_data_2/499_projected_w_mult.npz")
-        # /home/barthel/Documents/eg3d-1/eg3d/out/20231024-1256_multi_w_targets_5_iter_500_500_inter_depth_reg_data_2/fintuned_generator.pkl
-
-        # checkpoint = np.load("out/20231024-1914_multi_w_targets_5_iter_500_500_inter_depth_reg_data_3/499_projected_w_mult.npz")
-        # /home/barthel/Documents/eg3d-1/eg3d/out/20231024-1914_multi_w_targets_5_iter_500_500_inter_depth_reg_data_3/fintuned_generator.pkl
-
-        checkpoint = np.load("out/20240104-1233_multi_w_targets_5_iter_500_500_inter_depth_reg_data_std_neu/499_projected_w_mult.npz")
-        # /home/barthel/Documents/eg3d-1/eg3d/out/20231024-1458_multi_w_targets_5_iter_500_500_inter_depth_reg_data_4/fintuned_generator.pkl
-
-        # checkpoint = np.load("out/20231024-1550_multi_w_targets_5_iter_500_500_inter_depth_reg_data_5/499_projected_w_mult.npz")
-        # /home/barthel/Documents/eg3d-1/eg3d/out/20231024-1550_multi_w_targets_5_iter_500_500_inter_depth_reg_data_5/fintuned_generator.pkl
-
-        # checkpoint = np.load("out/20231024-1642_multi_w_targets_5_iter_500_500_inter_depth_reg_data_6/499_projected_w_mult.npz")
-
-
-
-        if "ws" in checkpoint.keys():
-            ws = [torch.tensor(w_).to("cuda") for w_ in checkpoint['ws']]
-            cs = [torch.tensor(c_).to("cuda") for c_ in checkpoint['cs']]
-            w = interpolate_w_by_cam(ws, cs, c, verbose=True).to("cuda")
-            # w = torch.tensor(self.interpolate_w_by_cam(ws, cs, c.detach().cpu().numpy())).to("cuda")
-        else:
-            w = torch.tensor(checkpoint["w"]).to("cuda")
+        w = self.get_w(pkl, c)
 
         if w_offset is not None:
             w_offset = torch.tensor(w_offset).to("cuda")[None, None, :].repeat(w.shape[0], 1, 1)
@@ -499,4 +482,17 @@ class Renderer:
             hook.remove()
         return out, layers
 
-#----------------------------------------------------------------------------
+    def get_w(self, pkl, c):
+        if pkl != self.last_pkl:
+            self.last_pkl = pkl
+            _, w_path = get_pkl_and_w(str(Path(pkl).parent))
+            self.checkpoint = np.load(w_path)
+            self.use_interpolate = "ws" in self.checkpoint.keys()
+            if self.use_interpolate:
+                self.ws = [torch.tensor(w_).to("cuda") for w_ in self.checkpoint['ws']]
+                self.cs = [torch.tensor(c_).to("cuda") for c_ in self.checkpoint['cs']]
+
+        if self.use_interpolate:
+            return interpolate_w_by_cam(self.ws, self.cs, c, verbose=False).to("cuda")
+        else:
+            return torch.tensor(self.checkpoint["w"]).to("cuda")

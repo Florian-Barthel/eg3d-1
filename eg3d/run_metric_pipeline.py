@@ -19,7 +19,7 @@ class MetricHandler:
         self.args.append(f"--num-samples={num_samples}")
         self.args.append(f"--rundir={rundir}")
         self.args.append(f"--run-w-plus={run_w_plus}")
-        self.python = "/home/barthel/miniconda3/envs/eg3d_3/bin/python"
+        self.python = "python"
 
         self.path_to_program = "run_metrics.py"
         subprocess.run([self.python, self.path_to_program, *self.args], shell=False)

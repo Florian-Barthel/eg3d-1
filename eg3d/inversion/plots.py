@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from inversion.load_data import ImageItem, load
 
-mpl.use('Qt5Agg')
+# mpl.use('Qt5Agg')
 
 
 def compare_cam_plot(images: List[ImageItem], save_path):
