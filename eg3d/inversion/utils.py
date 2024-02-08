@@ -31,9 +31,10 @@ def create_w_stats(G, w_avg_samples: int, device):
     return w_avg, w_std
 
 
-def interpolate_w_by_cam(ws: List[torch.tensor], cs: List[torch.tensor], c: torch.tensor, device="cuda", verbose=False):
-    angle = torch.tensor([CamItem(c).xz_angle()])
-    cs = torch.tensor([CamItem(cs[i]).xz_angle() for i in range(len(cs))])
+def interpolate_w_by_cam(ws: List[torch.tensor], cs: List[torch.tensor], c: torch.tensor, verbose=False):
+    device = ws[0].device
+    angle = torch.tensor([CamItem(c).xz_angle().to(device)])
+    cs = torch.tensor([CamItem(cs[i]).xz_angle().to(device) for i in range(len(cs))])
 
     if angle >= torch.max(cs):
         return ws[-1]

@@ -19,24 +19,22 @@ sys.path.append('Deep3DFaceRecon_pytorch')
 from Deep3DFaceRecon_pytorch.util.load_mats import load_lm3d
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--indir', type=str, required=True)
-    args = parser.parse_args()
+def run(indir):
+    img_files = sorted([x for x in os.listdir(indir) if x.lower().endswith(".png") or x.lower().endswith(".jpg")])
 
-    lm_dir = os.path.join(args.indir, "detections")
-    img_files = sorted([x for x in os.listdir(args.indir) if x.lower().endswith(".png") or x.lower().endswith(".jpg")])
+    lm_dir = os.path.join(indir, "detections")
     lm_files = sorted([x for x in os.listdir(lm_dir) if x.endswith(".txt")])
+    img_files = [x for x in img_files if x.split(".")[0] + ".txt" in lm_files]
 
     lm3d_std = load_lm3d("Deep3DFaceRecon_pytorch/BFM/") 
 
-    out_dir = os.path.join(args.indir, "crop")
+    out_dir = os.path.join(indir, "crop")
     if not os.path.exists(out_dir):
         os.makedirs(out_dir, exist_ok=True)
         
-    for img_file, lm_file in tqdm(zip(img_files, lm_files)):
+    for img_file, lm_file in tqdm(zip(img_files, lm_files), desc="Crop Images"):
 
-        img_path = os.path.join(args.indir, img_file)
+        img_path = os.path.join(indir, img_file)
         lm_path = os.path.join(lm_dir, lm_file)
         im = Image.open(img_path).convert('RGB')
         _,H = im.size
@@ -59,3 +57,10 @@ if __name__ == '__main__':
         im_cropped = im_cropped.resize((output_size, output_size), resample=Image.LANCZOS)
         out_path = os.path.join(out_dir, img_file.split(".")[0] + ".png")
         im_cropped.save(out_path)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--indir', type=str, required=True)
+    args = parser.parse_args()
+    run(args.indir)

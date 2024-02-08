@@ -26,7 +26,8 @@ sys.path.append('../../eg3d')
 from camera_utils import create_cam2world_matrix
 
 COMPRESS_LEVEL=0
-    
+
+
 def fix_intrinsics(intrinsics):
     intrinsics = np.array(intrinsics).copy()
     assert intrinsics.shape == (3, 3), intrinsics
@@ -41,6 +42,7 @@ def fix_intrinsics(intrinsics):
     assert intrinsics[2,1] == 0
     return intrinsics
 
+
 # For our recropped images, with correction
 def fix_pose(pose):
     COR = np.array([0, 0, 0.175])
@@ -50,6 +52,7 @@ def fix_pose(pose):
     pose[:3, 3] = direction * 2.7 + COR
     return pose
 
+
 # Used in original submission
 def fix_pose_orig(pose):
     pose = np.array(pose).copy()
@@ -57,6 +60,7 @@ def fix_pose_orig(pose):
     radius = np.linalg.norm(location)
     pose[:3, 3] = pose[:3, 3]/radius * 2.7
     return pose
+
 
 # Used for original crop images
 def fix_pose_simplify(pose):
@@ -67,6 +71,7 @@ def fix_pose_simplify(pose):
     simple_pose_matrix = create_cam2world_matrix(camera_view_dir.unsqueeze(0), camera_pos.unsqueeze(0))[0]
     return simple_pose_matrix.numpy()
 
+
 def flip_yaw(pose_matrix):
     flipped = pose_matrix.copy()
     flipped[0, 1] *= -1
@@ -76,6 +81,53 @@ def flip_yaw(pose_matrix):
     flipped[0, 3] *= -1
     return flipped
 
+
+def run(source, dest, max_images, mode, mirror_images=False):
+    camera_dataset_file = os.path.join(source, 'cameras.json')
+
+    with open(camera_dataset_file, "r") as f:
+        cameras = json.load(f)
+        
+    dataset = {'labels':[]}
+
+    max_images = max_images if max_images is not None else len(cameras)
+    for i, filename in tqdm(enumerate(cameras), total=max_images, desc="Fix Pose"):
+        if (max_images is not None and i >= max_images): break
+        pose = cameras[filename]['pose']
+        intrinsics = cameras[filename]['intrinsics']
+
+        if mode == 'cor':
+            pose = fix_pose(pose)
+        elif mode == 'orig':
+            pose = fix_pose_orig(pose)
+        elif mode == 'simplify':
+            pose = fix_pose_simplify(pose)
+        else:
+            assert False, "invalid mode"
+        intrinsics = fix_intrinsics(intrinsics)
+        label = np.concatenate([pose.reshape(-1), intrinsics.reshape(-1)]).tolist()
+            
+        image_path = os.path.join(source, filename)
+        img = Image.open(image_path)
+
+        dataset["labels"].append([filename, label])
+
+        os.makedirs(os.path.dirname(os.path.join(dest, filename)), exist_ok=True)
+        img.save(os.path.join(dest, filename))
+
+        if mirror_images:
+            flipped_img = ImageOps.mirror(img)
+            flipped_pose = flip_yaw(pose)
+            label = np.concatenate([flipped_pose.reshape(-1), intrinsics.reshape(-1)]).tolist()
+            base, ext = filename.split('.')[0], '.' + filename.split('.')[1]
+            flipped_filename = base + '_mirror' + ext
+            dataset["labels"].append([flipped_filename, label])
+            flipped_img.save(os.path.join(dest, flipped_filename))
+        
+    with open(os.path.join(dest, 'dataset.json'), "w") as f:
+        json.dump(dataset, f)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", type=str)
@@ -83,47 +135,4 @@ if __name__ == '__main__':
     parser.add_argument("--max_images", type=int, default=None)
     parser.add_argument("--mode", type=str, default="orig", choices=["orig", "cor"])
     args = parser.parse_args()
-
-    camera_dataset_file = os.path.join(args.source, 'cameras.json')
-
-    with open(camera_dataset_file, "r") as f:
-        cameras = json.load(f)
-        
-    dataset = {'labels':[]}
-
-    max_images = args.max_images if args.max_images is not None else len(cameras)
-    for i, filename in tqdm(enumerate(cameras), total=max_images):
-        if (max_images is not None and i >= max_images): break
-
-        pose = cameras[filename]['pose']
-        intrinsics = cameras[filename]['intrinsics']
-
-        if args.mode == 'cor':
-            pose = fix_pose(pose)
-        elif args.mode == 'orig':
-            pose = fix_pose_orig(pose)
-        elif args.mode == 'simplify':
-            pose = fix_pose_simplify(pose)
-        else:
-            assert False, "invalid mode"
-        intrinsics = fix_intrinsics(intrinsics)
-        label = np.concatenate([pose.reshape(-1), intrinsics.reshape(-1)]).tolist()
-            
-        image_path = os.path.join(args.source, filename)
-        img = Image.open(image_path)
-
-        dataset["labels"].append([filename, label])
-        os.makedirs(os.path.dirname(os.path.join(args.dest, filename)), exist_ok=True)
-        img.save(os.path.join(args.dest, filename))
-
-
-        flipped_img = ImageOps.mirror(img)
-        flipped_pose = flip_yaw(pose)
-        label = np.concatenate([flipped_pose.reshape(-1), intrinsics.reshape(-1)]).tolist()
-        base, ext = filename.split('.')[0], '.' + filename.split('.')[1]
-        flipped_filename = base + '_mirror' + ext
-        dataset["labels"].append([flipped_filename, label])
-        flipped_img.save(os.path.join(args.dest, flipped_filename))
-        
-    with open(os.path.join(args.dest, 'dataset.json'), "w") as f:
-        json.dump(dataset, f)
+    run(args.source, args.dest, args.max_images, args.mode)

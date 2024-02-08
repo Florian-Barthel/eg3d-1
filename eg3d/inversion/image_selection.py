@@ -1,15 +1,16 @@
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
-
 import torch
 from typing import List
-
 from inversion.load_data import load
 from inversion.load_data import ImageItem
-from inversion.plots import compare_cam_plot_interpolate
 
 
 def select_evenly(images: List[ImageItem], num_targets: int):
+    """
+    Given a list of images with camera parameters (c_item), this function returns the indices of target images that are
+    evenly distributed from the lowest angle xz angle to the highest.
+    """
     all_angles = torch.tensor([item.c_item.xz_angle() for item in images])
     min_angle = torch.min(all_angles)
     max_angle = torch.max(all_angles)
@@ -29,6 +30,10 @@ def select_evenly(images: List[ImageItem], num_targets: int):
 
 
 def select_evenly_interpolate(images: List[ImageItem], num_targets: int):
+    """
+    Calls select_evenly and then splits the list of indices into two lists with alternating values.
+    num_targets=7: a, b, a, b, a, b, a -> target_indices = [a,a,a,a], interpolated_indices = [b,b,b]
+    """
     num_total = num_targets + num_targets - 1
     all_indices = select_evenly(images, num_total)
     target_indices = []

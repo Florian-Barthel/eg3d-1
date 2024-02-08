@@ -9,8 +9,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 from inversion.utils import create_vgg_features, create_w_stats
 from inversion.loss import perc, mse, noise_reg, IDLoss
-from inversion.plots import compare_cam_plot
-from inversion.custom_vgg import CustomVGG, NvidiaVGG16
+# from inversion.plots import compare_cam_plot
+from inversion.custom_vgg import NvidiaVGG16
 from inversion.load_data import ImageItem
 
 
@@ -130,7 +130,7 @@ def project(
             current_cams = torch.cat([images[i].c_item.c for i in target_indices])
             original_cams = torch.cat([images[i].original_c_item.c for i in target_indices])
             writer.add_scalar('CAM/Absolute Camera Change', torch.sum(torch.abs(current_cams - original_cams)).detach().cpu().numpy(), step)
-            compare_cam_plot([images[i] for i in target_indices], save_path=outdir + f"/{step}_cam_plot.png")
+            # compare_cam_plot([images[i] for i in target_indices], save_path=outdir + f"/{step}_cam_plot.png")
         else:
             description = f'W Inversion: {step + 1:>4d}/{num_steps}'
             description += f" mse: {agg_mse_loss / len(target_indices):<4.2f}"

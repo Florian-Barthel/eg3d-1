@@ -160,7 +160,10 @@ def project(
 
             w_opt_list_np = [w_opt.detach().cpu().numpy() for w_opt in w_opt_list]
             cam_list_np = [images[i].c_item.c.detach().cpu().numpy() for i in target_indices]
-            np.savez(f'{outdir}/{step}_projected_w_mult.npz', ws=w_opt_list_np, cs=cam_list_np)
+            filename = name = f'{outdir}/{step}_projected_w_mult.npz'
+            if step == num_steps - 1:
+                filename = f'{outdir}/final_projected_w.npz'
+            np.savez(filename, ws=w_opt_list_np, cs=cam_list_np)
 
     if w_out.shape[2] == 1:
         w_out = w_out.repeat([1, 1, G.mapping.num_ws, 1])

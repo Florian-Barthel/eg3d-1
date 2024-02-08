@@ -14,58 +14,52 @@ import cv2
 import os
 from mtcnn import MTCNN
 import random
+from tqdm import tqdm
 detector = MTCNN()
 
-# see how to visualize the bounding box and the landmarks at : https://github.com/ipazc/mtcnn/blob/master/example.py 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--in_root', type=str, default="", help='process folder')
-args = parser.parse_args()
-in_root = args.in_root
+def run(in_root, out_path):
+    os.makedirs(out_path, exist_ok=True)
 
-out_detection = os.path.join(in_root, "detections")
+    imgs = sorted([x for x in os.listdir(in_root) if x.endswith(".jpg") or x.endswith(".png")])
+    random.shuffle(imgs)
+    for img in tqdm(imgs, desc="MTCNN detection"):
+        src = os.path.join(in_root, img)
+        if img.endswith(".jpg"):
+            dst = os.path.join(out_path, img.replace(".jpg", ".txt"))
+        elif img.endswith(".png"):
+            dst = os.path.join(out_path, img.replace(".png", ".txt"))
+        else:
+            raise NotImplementedError("Image not in [png, jpg]")
 
-if not os.path.exists(out_detection):
-    os.makedirs(out_detection)
+        if not os.path.exists(dst):
+            image = cv2.cvtColor(cv2.imread(src), cv2.COLOR_BGR2RGB)
+            result = detector.detect_faces(image)
 
-imgs = sorted([x for x in os.listdir(in_root) if x.endswith(".jpg") or x.endswith(".png")])
-random.shuffle(imgs)
-for img in imgs:
-    src = os.path.join(in_root, img)
-    print(src)
-    if img.endswith(".jpg"):
-        dst = os.path.join(out_detection, img.replace(".jpg", ".txt"))
-    if img.endswith(".png"):
-        dst = os.path.join(out_detection, img.replace(".png", ".txt"))
+            if len(result) > 0:
+                index = 0
+                if len(result) > 1: # if multiple faces, take the biggest face
+                    size = -100000
+                    for r in range(len(result)):
+                        size_ = result[r]["box"][2] + result[r]["box"][3]
+                        if size < size_:
+                            size = size_
+                            index = r
 
-    if not os.path.exists(dst):
-        image = cv2.cvtColor(cv2.imread(src), cv2.COLOR_BGR2RGB)
-        result = detector.detect_faces(image)
+                keypoints = result[index]['keypoints']
+                if result[index]["confidence"] > 0.9:
+                    outLand = open(dst, "w")
+                    outLand.write(str(float(keypoints['left_eye'][0])) + " " + str(float(keypoints['left_eye'][1])) + "\n")
+                    outLand.write(str(float(keypoints['right_eye'][0])) + " " + str(float(keypoints['right_eye'][1])) + "\n")
+                    outLand.write(str(float(keypoints['nose'][0])) + " " + str(float(keypoints['nose'][1])) + "\n")
+                    outLand.write(str(float(keypoints['mouth_left'][0])) + " " + str(float(keypoints['mouth_left'][1])) + "\n")
+                    outLand.write(str(float(keypoints['mouth_right'][0])) + " " + str(float(keypoints['mouth_right'][1])) + "\n")
+                    outLand.close()
 
-        if len(result)>0:
-            index = 0
-            if len(result)>1: # if multiple faces, take the biggest face
-                size = -100000
-                for r in range(len(result)):
-                    size_ = result[r]["box"][2] + result[r]["box"][3]
-                    if size < size_:
-                        size = size_
-                        index = r
 
-            bounding_box = result[index]['box']
-            keypoints = result[index]['keypoints']
-            if result[index]["confidence"] > 0.9:
-
-                if img.endswith(".jpg"):
-                    dst = os.path.join(out_detection, img.replace(".jpg", ".txt"))
-                if img.endswith(".png"):
-                    dst = os.path.join(out_detection, img.replace(".png", ".txt"))
-
-                outLand = open(dst, "w")
-                outLand.write(str(float(keypoints['left_eye'][0])) + " " + str(float(keypoints['left_eye'][1])) + "\n")
-                outLand.write(str(float(keypoints['right_eye'][0])) + " " + str(float(keypoints['right_eye'][1])) + "\n")
-                outLand.write(str(float(keypoints['nose'][0])) + " " +      str(float(keypoints['nose'][1])) + "\n")
-                outLand.write(str(float(keypoints['mouth_left'][0])) + " " + str(float(keypoints['mouth_left'][1])) + "\n")
-                outLand.write(str(float(keypoints['mouth_right'][0])) + " " + str(float(keypoints['mouth_right'][1])) + "\n")
-                outLand.close()
-                print(result)   
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--in_root', type=str, default="", help='process folder')
+    args = parser.parse_args()
+    out_path = os.path.join(args.in_root, "detections")
+    run(args.in_root, out_path)
