@@ -35,6 +35,8 @@ from viz import render_type_widget
 from viz import render_depth_sample_widget
 from viz import pca_widget
 
+from utils.run_dir import get_pkl_and_w
+
 #----------------------------------------------------------------------------
 
 class Visualizer(imgui_window.ImguiWindow):
@@ -309,21 +311,25 @@ def main(
 
     # List pickles.
     pretrained = [
-        'https://api.ngc.nvidia.com/v2/models/nvidia/research/eg3d/versions/1/files/ffhq512-128.pkl',
-        'https://api.ngc.nvidia.com/v2/models/nvidia/research/eg3d/versions/1/files/afhqcats512-128.pkl',
-        'https://api.ngc.nvidia.com/v2/models/nvidia/research/eg3d/versions/1/files/ffhqrebalanced512-64.pkl',
-        'https://api.ngc.nvidia.com/v2/models/nvidia/research/eg3d/versions/1/files/ffhqrebalanced512-128.pkl',
-        'https://api.ngc.nvidia.com/v2/models/nvidia/research/eg3d/versions/1/files/shapenetcars128-64.pkl',
-        "/home/barthel/Documents/eg3d-1/eg3d/out/20231018-1921_multi_w_targets_5_inter_depth_reg/fintuned_generator.pkl",
-        "/home/barthel/Documents/eg3d-1/eg3d/networks/var3-128.pkl",
-        "/home/barthel/Documents/eg3d-1/eg3d/out/20231020-1827_multi_w_targets_5_iter_500_500_inter_depth_reg_depth_loss_x2/fintuned_generator.pkl",
-        "C:\\Users\\flori\\Documents\\eg3d-1\\eg3d\\out\\20231020-1827_multi_w_targets_5_iter_500_500_inter_depth_reg_depth_loss_x2\\fintuned_generator.pkl",
-        "C:/Users/flori/Documents/eg3d-1/eg3d/out/20240104-1233_multi_w_targets_5_iter_500_500_inter_depth_reg_data_std_neu/fintuned_generator.pkl"
+        # 'https://api.ngc.nvidia.com/v2/models/nvidia/research/eg3d/versions/1/files/ffhq512-128.pkl',
+        # 'https://api.ngc.nvidia.com/v2/models/nvidia/research/eg3d/versions/1/files/afhqcats512-128.pkl',
+        # 'https://api.ngc.nvidia.com/v2/models/nvidia/research/eg3d/versions/1/files/ffhqrebalanced512-64.pkl',
+        # 'https://api.ngc.nvidia.com/v2/models/nvidia/research/eg3d/versions/1/files/ffhqrebalanced512-128.pkl',
+        # 'https://api.ngc.nvidia.com/v2/models/nvidia/research/eg3d/versions/1/files/shapenetcars128-64.pkl',
+        # "/home/barthel/Documents/eg3d-1/eg3d/out/20231018-1921_multi_w_targets_5_inter_depth_reg/fintuned_generator.pkl",
+        # "networks/var3-128.pkl",
+        # "/home/barthel/Documents/eg3d-1/eg3d/out/20231020-1827_multi_w_targets_5_iter_500_500_inter_depth_reg_depth_loss_x2/fintuned_generator.pkl"
+        "C:/Users/fbarthel/Documents/eg3d-1/eg3d/out/20231024-1026_multi_w_targets_5_iter_500_500_inter_depth_reg_data_1",
+        "C:/Users/fbarthel/Documents/eg3d-1/eg3d/out/20231024-1256_multi_w_targets_5_iter_500_500_inter_depth_reg_data_2",
+        "C:/Users/fbarthel/Documents/eg3d-1/eg3d/out/20231024-1914_multi_w_targets_5_iter_500_500_inter_depth_reg_data_3",
+        "C:/Users/fbarthel/Documents/eg3d-1/eg3d/out/20231024-1458_multi_w_targets_5_iter_500_500_inter_depth_reg_data_4",
+        "C:/Users/fbarthel/Documents/eg3d-1/eg3d/out/20231024-1550_multi_w_targets_5_iter_500_500_inter_depth_reg_data_5",
+        "C:/Users/fbarthel/Documents/eg3d-1/eg3d/out/20231024-1642_multi_w_targets_5_iter_500_500_inter_depth_reg_data_6",
     ]
 
     # Populate recent pickles list with pretrained model URLs.
     for url in pretrained:
-        viz.add_recent_pickle(url)
+        viz.add_recent_pickle(get_pkl_and_w(url)[0])
 
     # Run.
     while not viz.should_close():

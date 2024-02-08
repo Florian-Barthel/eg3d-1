@@ -12,10 +12,11 @@ import dnnlib
 
 
 class ImageItem:
-    def __init__(self, file_name: str, c: torch.tensor, device, img_resolution=512):
+    def __init__(self, file_name: str, c: torch.tensor = None, device="cuda", img_resolution=512):
         self.file_name = file_name
-        self.c_item = CamItem(c)
-        self.original_c_item = CamItem(copy.deepcopy(c))
+        if c is not None:
+            self.c_item = CamItem(c)
+            self.original_c_item = CamItem(copy.deepcopy(c))
         self.device = device
 
         # load image.

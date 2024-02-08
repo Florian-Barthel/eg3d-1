@@ -1,6 +1,3 @@
-import glob
-import re
-
 import click
 import numpy as np
 import torch
@@ -10,8 +7,9 @@ import dnnlib
 import legacy
 from inversion.image_selection import select_evenly
 from inversion.load_data import load
-from inversion.metrics import Metrics, DepthMetric
+from inversion.metrics import Metrics
 from inversion.utils import interpolate_w_by_cam
+from utils.run_dir import get_pkl_and_w
 
 
 @click.command()
@@ -20,7 +18,6 @@ from inversion.utils import interpolate_w_by_cam
 @click.option('--rundir', required=True, metavar='DIR')
 @click.option('--original-network', required=True, metavar='FILE')
 @click.option('--run-w-plus', type=bool, required=True)
-
 def run_metric(
         data_path: str,
         num_samples: int,
@@ -28,23 +25,7 @@ def run_metric(
         original_network: str,
         run_w_plus: bool
 ):
-    network_pkl = rundir + "/fintuned_generator.pkl"
-    w_files = glob.glob(rundir + "/*.npz")
-    max_num = -1
-    max_file = ""
-    for w_file in w_files:
-        w_file = w_file.split("/")[-1]
-        all_nums = re.findall(r'\d+', w_file)
-        if len(all_nums) == 0:
-            continue
-        current_num = int(all_nums[0])
-        if current_num > max_num:
-            max_num = current_num
-            max_file = w_file
-    w_path = rundir + "/" + max_file
-
-    print(f"Running metrics on {w_path} with generator {network_pkl}")
-
+    network_pkl, w_path = get_pkl_and_w(rundir)
     np.random.seed(42)
     torch.manual_seed(42)
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -79,11 +60,13 @@ def run_metric(
 
         target_indices = select_evenly(images, num_samples)
 
+        if "ws" in checkpoint.keys():
+            ws = [torch.tensor(w_).to("cuda") for w_ in checkpoint['ws']]
+            cs = [torch.tensor(c_).to("cuda") for c_ in checkpoint['cs']]
+
         for i in tqdm(target_indices):
             img = images[i]
             if "ws" in checkpoint.keys():
-                ws = [torch.tensor(w_).to("cuda") for w_ in checkpoint['ws']]
-                cs = [torch.tensor(c_).to("cuda") for c_ in checkpoint['cs']]
                 w = torch.tensor(interpolate_w_by_cam(ws, cs, img.c_item.c)).to("cuda")
             else:
                 w = torch.tensor(checkpoint["w"]).to("cuda")
