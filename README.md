@@ -1,6 +1,6 @@
 ## 3D Multiview Inversion
 
-<a href="florian-barthel.github.io/multiview-inversion/">Project page</a>
+<a href="[florian-barthel.github.io/multiview-inversion/](https://florian-barthel.github.io/multiview-inversion/)">Project page</a>
 
 ### Prepare Video Data
 
