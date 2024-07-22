@@ -22,7 +22,7 @@ def run(in_root, out_path):
     os.makedirs(out_path, exist_ok=True)
 
     imgs = sorted([x for x in os.listdir(in_root) if x.endswith(".jpg") or x.endswith(".png")])
-    random.shuffle(imgs)
+    # random.shuffle(imgs)
     for img in tqdm(imgs, desc="MTCNN detection"):
         src = os.path.join(in_root, img)
         if img.endswith(".jpg"):
@@ -47,7 +47,8 @@ def run(in_root, out_path):
                             index = r
 
                 keypoints = result[index]['keypoints']
-                if result[index]["confidence"] > 0.9:
+                # print(result[index]["confidence"])
+                if result[index]["confidence"] >= 0.99:
                     outLand = open(dst, "w")
                     outLand.write(str(float(keypoints['left_eye'][0])) + " " + str(float(keypoints['left_eye'][1])) + "\n")
                     outLand.write(str(float(keypoints['right_eye'][0])) + " " + str(float(keypoints['right_eye'][1])) + "\n")

@@ -11,7 +11,6 @@ import dnnlib
 import legacy
 from inversion.image_selection import select_evenly
 from inversion.load_data import load
-from inversion.metrics import Metrics
 from inversion.utils import interpolate_w_by_cam
 
 
@@ -31,7 +30,7 @@ def run(
     max_num = -1
     max_file = ""
     for w_file in w_files:
-        w_file = w_file.split("/")[-1]
+        w_file = w_file.split("/")[-1].split("\\")[-1]
         all_nums = re.findall(r'\d+', w_file)
         if len(all_nums) == 0:
             continue
@@ -46,6 +45,7 @@ def run(
     device = "cpu"#  if torch.cuda.is_available() else "cpu"
 
     # load data and latent
+    print(w_path)
     checkpoint = np.load(w_path)
     images = load(data_path, 512, device=device)
     target_indices = select_evenly(images, num_samples)
@@ -75,7 +75,7 @@ def run(
             if "ws" in checkpoint.keys():
                 ws = [torch.tensor(w_).to(device) for w_ in checkpoint['ws']]
                 cs = [torch.tensor(c_).to(device) for c_ in checkpoint['cs']]
-                w = torch.tensor(interpolate_w_by_cam(ws, cs, img.c_item.c, device=device)).to(device)
+                w = torch.tensor(interpolate_w_by_cam(ws, cs, img.c_item.c)).to(device)
             else:
                 w = torch.tensor(checkpoint["w"]).to(device)
             synth_image = G.synthesis(w, c=img.c_item.c, noise_mode='const')['image'][0]

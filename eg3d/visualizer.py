@@ -317,7 +317,7 @@ def main(
         # 'https://api.ngc.nvidia.com/v2/models/nvidia/research/eg3d/versions/1/files/ffhqrebalanced512-128.pkl',
         # 'https://api.ngc.nvidia.com/v2/models/nvidia/research/eg3d/versions/1/files/shapenetcars128-64.pkl',
         # "/home/barthel/Documents/eg3d-1/eg3d/out/20231018-1921_multi_w_targets_5_inter_depth_reg/fintuned_generator.pkl",
-        # "networks/var3-128.pkl",
+        os.getcwd() + "./networks/var3-128.pkl",
         # "/home/barthel/Documents/eg3d-1/eg3d/out/20231020-1827_multi_w_targets_5_iter_500_500_inter_depth_reg_depth_loss_x2/fintuned_generator.pkl"
         "C:/Users/fbarthel/Documents/eg3d-1/eg3d/out/20231024-1026_multi_w_targets_5_iter_500_500_inter_depth_reg_data_1",
         "C:/Users/fbarthel/Documents/eg3d-1/eg3d/out/20231024-1256_multi_w_targets_5_iter_500_500_inter_depth_reg_data_2",
@@ -327,9 +327,13 @@ def main(
         "C:/Users/fbarthel/Documents/eg3d-1/eg3d/out/20231024-1642_multi_w_targets_5_iter_500_500_inter_depth_reg_data_6",
     ]
 
+    # pretrained = [os.path.join(os.getcwd(), "out_multi_w_3DIL", x) for x in os.listdir("./out_multi_w_3DIL")]
+    pretrained = [os.path.join(os.getcwd(), "out_efhq", x) for x in os.listdir("./out_efhq")]
+
+
     # Populate recent pickles list with pretrained model URLs.
     for url in pretrained:
-        viz.add_recent_pickle(get_pkl_and_w(url)[0])
+        viz.add_recent_pickle(get_pkl_and_w(url, verbose=True)[0])
 
     # Run.
     while not viz.should_close():

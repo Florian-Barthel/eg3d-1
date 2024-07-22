@@ -20,11 +20,12 @@ def compare_cam_plot(images: List[ImageItem], save_path):
     ax.set_zlim([-3, 3])
 
     for i, img in enumerate(images):
-        ax.scatter(*img.c_item.xyz(), marker="o", color="blue")
-        ax.scatter(*img.original_c_item.xyz(), marker="*", color="red")
+        ax.scatter(*img.c_item.xyz(as_numpy=True), marker="o", color="blue")
+        ax.scatter(*img.original_c_item.xyz(as_numpy=True), marker="*", color="red")
 
     ax.view_init(160, -90)
     plt.savefig(save_path, dpi=300)
+    plt.close()
 
 
 def compare_cam_plot_interpolate(images_list: List[ImageItem], interpolated_list: List[ImageItem]):

@@ -25,15 +25,18 @@ vids/
 
 stylegan3/results
 eg3d/results
+eg3d/out*
 eg3d_results
 .idea
 dataset_preprocessing/ffhq/lineup
 dataset_preprocessing/ffhq/neurohum
 dataset_preprocessing/ffhq/Neurohum_all
 dataset_preprocessing/ffhq/3DIL_dataset
+dataset_preprocessing/ffhq/3DIL_dataset_filter
 dataset_preprocessing/ffhq/checkpoints
 
 eg3d/pretrained_models
 eg3d/_screenshots/*
 eg3d/out_sync/*
 dataset_preprocessing/ffhq/Deep3DFaceRecon_pytorch
+/dataset_preprocessing/ffhq/3DIL_dataset_filter_conf/

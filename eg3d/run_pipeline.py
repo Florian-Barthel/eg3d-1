@@ -85,34 +85,34 @@ if __name__ == "__main__":
     gpu_index = args.gpu
     os.environ["CUDA_VISIBLE_DEVICES"] = f"{gpu_index}"
 
-    dataset_folder = "../dataset_preprocessing/ffhq/3DIL_dataset"
+    dataset_folder = "../dataset_preprocessing/ffhq/3DIL_dataset_filter_conf"
     all_folders = sorted(os.listdir(dataset_folder))
 
-    # for i in range(0, len(all_folders), 4):
-    #     folder = os.path.join(dataset_folder, all_folders[i + gpu_index])
-    #     print(f"Running on {folder}")
-    #     SingleWHandler(
-    #         dataset=folder,
-    #         num_targets=7,
-    #         num_steps=500,
-    #         num_steps_pti=500,
-    #         outdir="out_single_w_3DIL"
-    #     )
-
-    checkpoint_folder = "./out_single_w_3DIL"
     for i in range(0, len(all_folders), 4):
         folder = os.path.join(dataset_folder, all_folders[i + gpu_index])
-        checkpoint = f"./out_single_w_3DIL/single-w_{all_folders[i + gpu_index]}/499_projected_w.npz"
         print(f"Running on {folder}")
-        print(f"Using checkpoint {checkpoint}")
-        MultiWHandler(
+        SingleWHandler(
             dataset=folder,
-            continue_w=checkpoint,
-            num_targets=5,
-            use_interpolation=True,
-            w_norm_reg=True,
-            depth_reg=True,
-            num_steps=500,
-            num_steps_pti=500,
-            outdir="out_multi_w_3DIL"
+            num_targets=7,
+            num_steps=1000,
+            num_steps_pti=1000,
+            outdir="out_single_filtered_w_3DIL"
         )
+
+    # checkpoint_folder = "./out_single_w_3DIL"
+    # for i in range(0, len(all_folders), 4):
+    #     folder = os.path.join(dataset_folder, all_folders[i + gpu_index])
+    #     checkpoint = f"./out_single_w_3DIL/single-w_{all_folders[i + gpu_index]}/499_projected_w.npz"
+    #     print(f"Running on {folder}")
+    #     print(f"Using checkpoint {checkpoint}")
+    #     MultiWHandler(
+    #         dataset=folder,
+    #         continue_w=checkpoint,
+    #         num_targets=5,
+    #         use_interpolation=True,
+    #         w_norm_reg=True,
+    #         depth_reg=True,
+    #         num_steps=1000,
+    #         num_steps_pti=1000,
+    #         outdir="out_multi_w_3DIL_1000"
+    #     )

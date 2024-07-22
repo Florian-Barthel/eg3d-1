@@ -1,4 +1,6 @@
 import copy
+import os
+from pathlib import Path
 from typing import List
 import numpy as np
 import PIL.Image
@@ -38,7 +40,7 @@ def project(
     _, w_std = create_w_stats(G, w_avg_samples, device)
     w_checkpoint = np.load(continue_checkpoint)
     w_checkpoint = torch.tensor(w_checkpoint[("w")]).to(device)
-    vgg = NvidiaVGG16(device)
+    vgg = CustomVGG("vgg16").to(device)
     create_vgg_features(images, vgg, downsampling=downsampling)
     id_loss_model = IDLoss()
     depth_loss_model = DepthLossAll(num_targets=len(target_indices))
@@ -79,6 +81,7 @@ def project(
             synth = G.synthesis(w_opt, c=images[i].c_item.c, noise_mode='const')
             synth_image = synth['image']
             perc_loss = perc(images[i].feature, synth_image, vgg=vgg, downsampling=downsampling)
+            # perc_loss_2 = perc(images[i].feature, images[i].target_tensor, vgg=vgg, downsampling=downsampling)
             mse_loss = mse(images[i].target_tensor, synth_image)
             w_norm_loss = 0
             if use_w_norm_reg:
@@ -101,7 +104,7 @@ def project(
         optimizer.zero_grad(set_to_none=True)
 
         # depth step
-        if step % 1 == 0 and use_depth_reg:
+        if use_depth_reg:
             agg_depth_loss = 0
             random_cam_index = np.random.choice(len(target_indices))
             random_cam = images[target_indices[random_cam_index]].c_item.c
@@ -160,7 +163,7 @@ def project(
 
             w_opt_list_np = [w_opt.detach().cpu().numpy() for w_opt in w_opt_list]
             cam_list_np = [images[i].c_item.c.detach().cpu().numpy() for i in target_indices]
-            filename = name = f'{outdir}/{step}_projected_w_mult.npz'
+            filename = f'{outdir}/{step}_projected_w_mult.npz'
             if step == num_steps - 1:
                 filename = f'{outdir}/final_projected_w.npz'
             np.savez(filename, ws=w_opt_list_np, cs=cam_list_np)

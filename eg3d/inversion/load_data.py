@@ -34,14 +34,29 @@ class ImageItem:
 
 
 class CamItem:
+    # def __init__(self, c: torch.tensor):
+    #     self.c = c
+    #
+    # def extrinsic(self):
+    #     return self.c[0, :16].reshape(4, 4)
+    #
+    # def intrinsic(self):
+    #     return self.c[0, 16:].reshape(3, 3)
+
     def __init__(self, c: torch.tensor):
-        self.c = c
+        # self._c = c
+        self._extrinsics = c[:, :16].clone()
+        self._intrinsics = c[:, 16:].clone()
+
+    @property
+    def c(self):
+        return torch.concat([self._extrinsics, self._intrinsics], dim=-1)
 
     def extrinsic(self):
-        return self.c[0, :16].reshape(4, 4)
+        return self._extrinsics.reshape(4, 4)
 
     def intrinsic(self):
-        return self.c[0, 16:].reshape(3, 3)
+        return self._intrinsics.reshape(3, 3)
 
     def rotation(self):
         return self.extrinsic()[:-1, :-1]
@@ -73,7 +88,7 @@ def load(folder: str, img_resolution: int, device="cpu") -> List[ImageItem]:
     dataset = dnnlib.util.construct_class_by_name(**dataset_kwargs)
     images = []
 
-    use_file_names = sorted(fnmatch.filter(dataset._image_fnames, "[!epoch][!crop]*[0-9].png"))
+    use_file_names = sorted(fnmatch.filter(dataset._image_fnames, "[!crop]*[0-9].png"))
     # use_file_names_sorted = ["" for _ in range(len(use_file_names))]
     # for file_name in use_file_names:
     #     index = re.findall(r'\d+', file_name)[0]

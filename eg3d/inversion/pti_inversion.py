@@ -48,8 +48,11 @@ def project_pti(
 
         for i in target_indices:
             synth_images = G.synthesis(w_pivot, c=images[i].c_item.c, noise_mode='const')['image']
-            perc_loss = perc(images[i].feature, synth_images, vgg, downsampling=downsampling)
-            mse_loss = mse(images[i].target_tensor, synth_images)
+
+            mse_scale = 1 if i == len(target_indices) // 2 else 0
+            mse_loss = mse(images[i].target_tensor, synth_images) * mse_scale
+            perc_loss = perc(images[i].feature, synth_images, vgg, downsampling=downsampling)#  * mse_scale
+
             id_loss = id_loss_model(synth_image=synth_images, target_image=images[i].target_tensor)
 
             loss = 0.1 * mse_loss + perc_loss + id_loss
@@ -73,9 +76,9 @@ def project_pti(
         optimizer.step()
         optimizer.zero_grad(set_to_none=True)
 
-        if step == num_steps - 1 or step % 25 == 0:
+        if step == num_steps - 1 or step % 100 == 0:
+            out_params.append(copy.deepcopy(G).eval().requires_grad_(False).cpu())
             for i in target_indices:
-                out_params.append(copy.deepcopy(G).eval().requires_grad_(False).cpu())
                 with torch.no_grad():
                     synth_image = G.synthesis(w_pivot, c=images[i].c_item.c, noise_mode='const')['image']
                     synth_image = (synth_image + 1) * (255 / 2)

@@ -2,13 +2,15 @@ import numpy as np
 from training_paths import single_view, multi_view_9, checkpoints_inter_depth_reg, SPI, checkpoints_without_reg
 import matplotlib.pyplot as plt
 
-selected_checkpoints = [single_view, SPI, multi_view_9, checkpoints_without_reg, checkpoints_inter_depth_reg]
+selected_checkpoints = [single_view, multi_view_9, checkpoints_without_reg, checkpoints_inter_depth_reg]
+
+# selected_checkpoints = [single_view, SPI, multi_view_9, checkpoints_without_reg, checkpoints_inter_depth_reg]
 legend = [
-    "single-view PTI",
-    "single-view SPI",
-    "multi-view 9",
-    "multi-latent 9",
-    "multi-latent 9 + consistency reg"
+    "single-view",
+    #"single-view SPI",
+    "multi-view",
+    "multi-latent",
+    "multi-latent + consistency reg."
 ]
 
 for i, selected_checkpoint in enumerate(selected_checkpoints):
@@ -33,5 +35,5 @@ for i, selected_checkpoint in enumerate(selected_checkpoints):
 plt.ylabel("ID Similarity")
 plt.xlabel("Viewing angle in degree")
 plt.legend()
-plt.savefig("angle_graph.png", dpi=300)
+plt.savefig("angle_graph_single_multi.png", dpi=300)
 plt.show()

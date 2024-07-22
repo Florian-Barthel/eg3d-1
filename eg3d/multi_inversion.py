@@ -26,7 +26,7 @@ from inversion.image_selection import select_evenly
 @click.option('--num-steps', help='Number of optimization steps', type=int, default=500, show_default=True)
 @click.option('--num-steps-pti', help='Number of optimization steps for pivot tuning', type=int, default=350, show_default=True)
 @click.option('--seed', help='Random seed', type=int, default=303, show_default=True)
-@click.option('--save-video', help='Save an mp4 video of optimization progress', type=bool, default=True, show_default=True)
+@click.option('--save-video', help='Save an mp4 video of optimization progress', type=bool, default=False, show_default=True)
 @click.option('--outdir', help='Where to save the output images', required=True, metavar='DIR')
 @click.option('--num-targets', help='Number of targets to use for inversion', default=10, show_default=True)
 @click.option('--downsampling', help='Downsample images from 512 to 256', type=bool, required=True)
@@ -43,12 +43,12 @@ def run_projection(
         downsampling: bool,
         optimize_cam: bool
 ):
-    # cur_time = time.strftime("%Y%m%d-%H%M", time.localtime())
+    cur_time = time.strftime("%Y%m%d-%H%M", time.localtime())
     # desc = ("/" + cur_time)
     # desc += f"_multiview_{num_targets}"
     # desc += f"_iter_{num_steps}_{num_steps_pti}"
     data_index = target_fname.split("/")[-1]
-    desc = "/single-w_" + data_index
+    desc = "/" + cur_time + "_single-w_all_cam_param" + data_index
     os.makedirs(outdir, exist_ok=True)
     outdir += desc
     writer = SummaryWriter(outdir)

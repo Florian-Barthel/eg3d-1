@@ -1,10 +1,8 @@
 import json
 import os
-import time
 from time import perf_counter
 from typing import List
 import click
-import imageio
 import numpy as np
 import PIL.Image
 import torch
