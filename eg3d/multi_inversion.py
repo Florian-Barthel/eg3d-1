@@ -23,13 +23,13 @@ from inversion.image_selection import select_evenly
 @click.command()
 @click.option('--network', 'network_pkl', help='Network pickle filename', required=True)
 @click.option('--target', 'target_fname', help='Target image file to project to', required=True, metavar='FILE|DIR')
-@click.option('--num-steps', help='Number of optimization steps', type=int, default=500, show_default=True)
-@click.option('--num-steps-pti', help='Number of optimization steps for pivot tuning', type=int, default=350, show_default=True)
+@click.option('--num-steps', help='Number of optimization steps', type=int, default=1000, show_default=True)
+@click.option('--num-steps-pti', help='Number of optimization steps for pivot tuning', type=int, default=500, show_default=True)
 @click.option('--seed', help='Random seed', type=int, default=303, show_default=True)
 @click.option('--save-video', help='Save an mp4 video of optimization progress', type=bool, default=False, show_default=True)
-@click.option('--outdir', help='Where to save the output images', required=True, metavar='DIR')
-@click.option('--num-targets', help='Number of targets to use for inversion', default=10, show_default=True)
-@click.option('--downsampling', help='Downsample images from 512 to 256', type=bool, required=True)
+@click.option('--outdir', help='Where to save the output images', required=True, metavar='FILE|DIR')
+@click.option('--num-targets', help='Number of targets to use for inversion', type=int, required=True)
+@click.option('--downsampling', help='Downsample images from 512 to 256', type=bool, default=True, show_default=True)
 @click.option('--optimize-cam', type=bool, required=True)
 def run_projection(
         network_pkl: str,
@@ -43,13 +43,9 @@ def run_projection(
         downsampling: bool,
         optimize_cam: bool
 ):
-    cur_time = time.strftime("%Y%m%d-%H%M", time.localtime())
-    # desc = ("/" + cur_time)
-    # desc += f"_multiview_{num_targets}"
-    # desc += f"_iter_{num_steps}_{num_steps_pti}"
-    data_index = target_fname.split("/")[-1]
-    desc = "/" + cur_time + "_single-w_all_cam_param" + data_index
     os.makedirs(outdir, exist_ok=True)
+    data_index = target_fname.split("/")[-1]
+    desc = "/" + data_index
     outdir += desc
     writer = SummaryWriter(outdir)
 
@@ -117,18 +113,18 @@ def run_projection(
         }, file)
 
     # Save final projected frame and W vector.
-    images[0].target_pil.save(f'{outdir}/target.png')
     projected_w = projected_w_steps[-1]
     G_final = G_steps[-1].to(device)
-    synth_image = G_final.synthesis(projected_w.to(device), c=images[0].c_item.c, noise_mode='const')['image']
-    synth_image = (synth_image + 1) * (255 / 2)
-    synth_image = synth_image.permute(0, 2, 3, 1).clamp(0, 255).to(torch.uint8)[0].cpu().numpy()
-    PIL.Image.fromarray(synth_image, 'RGB').save(f'{outdir}/proj.png')
-    np.savez(f'{outdir}/projected_w.npz', w=projected_w.cpu().numpy())
+
+    np.savez(f'{outdir}/final_projected_w.npz', w=projected_w.cpu().numpy())
 
     with open(f'{outdir}/fintuned_generator.pkl', 'wb') as f:
         network_data["G_ema"] = G_final.eval().requires_grad_(False).cpu()
         pickle.dump(network_data, f)
+
+    with open(f'{outdir}/images.pkl', 'wb') as f:
+        network_data["G_ema"] = G_final.eval().requires_grad_(False).cpu()
+        pickle.dump([images[i] for i in target_indices], f)
 
     if save_video:
         create_pti_video(G_steps=G_steps, outdir=outdir, projected_ws=repeated_ws[-1], images=images, all_indices=target_indices)

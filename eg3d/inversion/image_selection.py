@@ -25,7 +25,7 @@ def select_evenly(images: List[ImageItem], num_targets: int):
     target_indices = []
     for target_angle in target_angles:
         distance = torch.abs(all_angles - target_angle)
-        target_indices.append(torch.argmin(distance))
+        target_indices.append(torch.argmin(distance).item())
     return target_indices
 
 

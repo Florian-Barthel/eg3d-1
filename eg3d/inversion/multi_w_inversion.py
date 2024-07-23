@@ -29,7 +29,7 @@ def project(
         inter_indices: List[int],
         downsampling=True,
         writer: SummaryWriter,
-        continue_checkpoint,
+        w_checkpoint,
         use_interpolation,
         use_depth_reg: bool,
         use_w_norm_reg: bool
@@ -38,12 +38,11 @@ def project(
 
     G = copy.deepcopy(G).eval().requires_grad_(False).to(device)
     _, w_std = create_w_stats(G, w_avg_samples, device)
-    w_checkpoint = np.load(continue_checkpoint)
-    w_checkpoint = torch.tensor(w_checkpoint[("w")]).to(device)
+
     vgg = CustomVGG("vgg16").to(device)
     create_vgg_features(images, vgg, downsampling=downsampling)
     id_loss_model = IDLoss()
-    depth_loss_model = DepthLossAll(num_targets=len(target_indices))
+    depth_loss_model = DepthLossAll(num_targets=len(target_indices), depth_multiplier=1)
 
     w_opt_list = []
     for _ in range(len(target_indices)):
@@ -54,11 +53,6 @@ def project(
     w_out = torch.zeros([num_steps, len(target_indices)] + list(w_opt_list[0].shape[1:]), dtype=torch.float32, device="cpu")
     optimizer = torch.optim.Adam(w_opt_list, betas=(0.9, 0.999), lr=initial_learning_rate)
 
-    # optimize camera parameters of input data
-    cam_parameters = []
-    for img in images:
-        img.c_item.c.requires_grad = True
-        cam_parameters.append(img.c_item.c)
 
     for step in tqdm(range(num_steps)):
         # Learning rate schedule.
@@ -147,7 +141,7 @@ def project(
             w_out[step][i] = w_opt.detach().cpu()[0]
 
         # save results
-        if step == num_steps - 1 or step % 25 == 0:
+        if step == num_steps - 1 or step % 100 == 0:
             for count, pair in enumerate(zip(target_indices, w_opt_list)):
                 i, w_opt = pair
                 with torch.no_grad():

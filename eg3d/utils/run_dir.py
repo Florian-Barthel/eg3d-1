@@ -5,9 +5,9 @@ import os
 
 def get_pkl_and_w(rundir: str, verbose=False):
     network_pkl = rundir + "/fintuned_generator.pkl"
-    w_path = rundir + "/final_projected_w.npz"
+    w_path = rundir + "/final_projected_w.npz" #     w_path = rundir + "/projected_w.npz"
 
-    if not os.path.exists(w_path):
+    if not os.path.isfile(w_path):
         w_files = glob.glob(rundir + "/*.npz")
         max_num = -1
         max_file = ""

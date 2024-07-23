@@ -33,7 +33,7 @@ def project_pti(
     vgg = NvidiaVGG16(device=device)
     create_vgg_features(images, vgg, downsampling)
     id_loss_model = IDLoss()
-    depth_loss_model = DepthLossAll(num_targets=len(target_indices))
+    depth_loss_model = DepthLossAll(num_targets=len(target_indices), depth_multiplier=1)
     w_pivots = [w_pivot.to(device).detach() for w_pivot in w_pivots]
     optimizer = torch.optim.Adam(G.parameters(), betas=(0.9, 0.999), lr=initial_learning_rate)
 
@@ -106,9 +106,9 @@ def project_pti(
             writer.add_scalar('PTI/Interpolate Perc', perc_loss_agg / len(inter_indices), step)
 
         # save results
-        if step == num_steps - 1 or step % 25 == 0:
+        if step == num_steps - 1 or step % 100 == 0:
+            out_params.append(copy.deepcopy(G).eval().requires_grad_(False).cpu())
             for i, w_pivot in zip(target_indices, w_pivots):
-                out_params.append(copy.deepcopy(G).eval().requires_grad_(False).cpu())
                 with torch.no_grad():
                     synth_image = G.synthesis(w_pivot.unsqueeze(0), c=images[i].c_item.c, noise_mode='const')['image']
                     synth_image = (synth_image + 1) * (255 / 2)

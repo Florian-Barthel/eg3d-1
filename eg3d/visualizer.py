@@ -328,7 +328,12 @@ def main(
     ]
 
     # pretrained = [os.path.join(os.getcwd(), "out_multi_w_3DIL", x) for x in os.listdir("./out_multi_w_3DIL")]
-    pretrained = [os.path.join(os.getcwd(), "out_efhq", x) for x in os.listdir("./out_efhq")]
+
+    # folder = "out_efhq_cam_opt"
+    # folder = "debug"
+    # folder = "debug_multi_w"
+    folder = "out_efhq_v3"
+    pretrained = [os.path.join(os.getcwd(), folder, x) for x in os.listdir(folder)]
 
 
     # Populate recent pickles list with pretrained model URLs.

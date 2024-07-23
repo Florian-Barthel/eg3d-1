@@ -81,7 +81,7 @@ class DepthLoss:
 
 
 class DepthLossAll:
-    def __init__(self, num_targets, depth_image_size=128, depth_multiplier=1.0):
+    def __init__(self, num_targets, depth_image_size=64, depth_multiplier=1.0):
         # cs, ws, H, W
         self.depth_list = torch.zeros([num_targets, num_targets, depth_image_size, depth_image_size], dtype=torch.float32).to("cuda")
         # cs

@@ -59,8 +59,8 @@ def project(
     # optimize camera parameters of input data
     cam_parameters = []
     for img in images:
-        img.c_item._intrinsics.requires_grad = True
-        cam_parameters.append(img.c_item._intrinsics)
+        # img.c_item._intrinsics.requires_grad = True
+        # cam_parameters.append(img.c_item._intrinsics)
         img.c_item._extrinsics.requires_grad = True
         cam_parameters.append(img.c_item._extrinsics)
 
